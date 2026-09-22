@@ -280,10 +280,10 @@ class RAGHealthAssistant:
             ])
 
         # Attempt Google Gemini LLM completion
-        if api_key and not api_key.startswith("AQ.") and len(api_key) > 10:
+        if api_key and len(api_key.strip()) > 10:
             try:
                 import google.generativeai as genai
-                genai.configure(api_key=api_key)
+                genai.configure(api_key=api_key.strip())
                 
                 lang_instructions = {
                     "tanglish": "IMPORTANT: Answer in friendly, natural Tanglish (Tamil spoken words written in clear Roman/English script). Example: 'Dengue-kku hydration thaan mukkiyam...'",
@@ -295,8 +295,11 @@ class RAGHealthAssistant:
                 }
                 lang_note = lang_instructions.get(target_lang, "")
 
-                model = genai.GenerativeModel('gemini-1.5-flash')
-                prompt = f"""You are MedSimplify AI Health Assistant. 
+                response_text = None
+                for model_name in ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-pro', 'gemini-pro-latest', 'gemini-2.5-flash-lite']:
+                    try:
+                        model = genai.GenerativeModel(model_name)
+                        prompt = f"""You are MedSimplify AI Health Assistant. 
 Answer the user's health question using ONLY the provided medical report context.
 Highlight key lab parameters, abnormal flags, reference ranges, and doctor advice.
 Always cite the source report name and date.
@@ -310,13 +313,20 @@ FULL REPORT CONTEXT:
 
 USER QUESTION: {query}
 """
-                res = model.generate_content(prompt)
-                if res and res.text:
+                        res = model.generate_content(prompt)
+                        if res and res.text and res.text.strip():
+                            response_text = res.text.strip()
+                            break
+                    except Exception as err:
+                        print(f"[RAG Gemini] Model {model_name} failed: {err}")
+                        continue
+
+                if response_text:
                     source_names = [f"📄 {s['file_name']} ({s['date']})" for s in sources]
                     citation_text = "\n\n📌 **Retrieved Data Sources:**\n" + "\n".join(f"• {name}" for name in source_names)
                     return {
                         "question": query,
-                        "answer": res.text + citation_text,
+                        "answer": response_text + citation_text,
                         "is_rag": True,
                         "sources": sources,
                         "vector_chunks": top_chunks or [],
@@ -467,10 +477,10 @@ Based on vector similarity retrieval across your selected report(s) (**{source_c
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or self.gemini_key
 
         # Attempt Gemini LLM
-        if api_key and not api_key.startswith("AQ.") and len(api_key) > 10:
+        if api_key and len(api_key.strip()) > 10:
             try:
                 import google.generativeai as genai
-                genai.configure(api_key=api_key)
+                genai.configure(api_key=api_key.strip())
                 
                 lang_instructions = {
                     "tanglish": "IMPORTANT: Answer in friendly, natural Tanglish (Tamil spoken words written in clear Roman/English script). Example: 'Dengue-kku hydration thaan mukkiyam...'",
@@ -483,11 +493,11 @@ Based on vector similarity retrieval across your selected report(s) (**{source_c
                 lang_note = lang_instructions.get(target_lang, "")
 
                 response_text = None
-                for model_name in ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-pro']:
+                for model_name in ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-pro', 'gemini-pro-latest', 'gemini-2.5-flash-lite']:
                     try:
                         model = genai.GenerativeModel(model_name)
                         prompt = f"""You are MedSimplify AI Health Assistant. 
-Answer the user's general health question clearly, empathetically, accurately, and concisely with Markdown formatting (bullet points, bold highlights, advice, and disclaimers).
+Answer the user's general health question clearly, empathetically, accurately, and concisely with clean Markdown formatting (bullet points, bold highlights, practical immediate care, red flag warnings, and when to see a doctor).
 {lang_note}
 
 USER QUESTION: {query}
@@ -496,7 +506,8 @@ USER QUESTION: {query}
                         if res and res.text and res.text.strip():
                             response_text = res.text.strip()
                             break
-                    except Exception:
+                    except Exception as err:
+                        print(f"[General Gemini] Model {model_name} failed: {err}")
                         continue
 
                 if response_text:
