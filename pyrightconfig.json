@@ -1,0 +1,32 @@
+{
+  "include": [
+    "backend"
+  ],
+  "exclude": [
+    "backend/download_models.py",
+    "backend/services/medical_ner.py",
+    "backend/services/text_simplifier.py",
+    "backend/services/translator.py"
+  ],
+  "stubPath": "typings",
+  "executionEnvironments": [
+    {
+      "root": "backend",
+      "extraPaths": [
+        "backend",
+        "backend/app",
+        "typings"
+      ]
+    }
+  ],
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none",
+  "reportMissingTypeStubs": false,
+  "reportAttributeAccessIssue": "none",
+  "reportCallIssue": "none",
+  "reportOperatorIssue": "none",
+  "reportIndexIssue": "none",
+  "reportArgumentType": "none",
+  "reportReturnType": "none",
+  "typeCheckingMode": "off"
+}

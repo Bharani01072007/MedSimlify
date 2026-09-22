@@ -1,0 +1,115 @@
+# MedSimplify Full Feature Roadmap & Hugging Face AI Model Mapping Plan
+
+This plan establishes the complete feature set categorized from `APP FEATURES.docx` across Patient and Doctor applications, specifies the exact Hugging Face AI models and pipelines for each feature, and details the end-to-end implementation roadmap.
+
+---
+
+## 🤖 Hugging Face AI Models & Pipeline Classification
+
+| AI Feature | Task / Capability | Recommended Hugging Face Model | Local / Offline Fallback |
+| :--- | :--- | :--- | :--- |
+| **1. Medical OCR & Document Digitization** | Image/PDF text extraction | `microsoft/trocr-base-printed` / `baidu-research/donut-base` | PyTesseract + PyMuPDF |
+| **2. Biomedical NER & Entity Extraction** | Lab values, test names, ranges | `d4data/biomedical-ner-all` / `emilyalsentzer/Bio_ClinicalBERT` | SciSpacy (`en_core_sci_sm`) |
+| **3. Medical Report Simplification & Summarization** | Medical jargon to plain English | `google/flan-t5-large` / `FacebookAI/bart-large-cnn` | Rules + T5-small |
+| **4. "Explain Like I'm 5" (ELI5) Mode** | Ultra-simple elderly/child terms | `google/flan-t5-base` | Templated ELI5 Parser |
+| **5. Regional Language Translation** | Hindi, Tamil, Telugu, Spanish | `Helsinki-NLP/opus-mt-en-hi`, `Helsinki-NLP/opus-mt-en-mul` | Googletrans / MarianMT |
+| **6. Voice Explanations (Text-to-Speech)** | Audio report playback | `facebook/mms-tts-hin` / `facebook/mms-tts-tam` | gTTS / Web Speech API |
+| **7. AI Patient Health Assistant (Q&A Chat)** | 24/7 patient health questions | `microsoft/biogpt` / `mistralai/Mistral-7B-Instruct-v0.2` | BioGPT / Flan-T5 |
+| **8. AI Clinical Assistant & Red Flag Alerts** | Abnormality flagging & differential diagnosis | `emilyalsentzer/Bio_ClinicalBERT` + Classification Head | Rule Engine + Range Checker |
+| **9. Symptom Trend Analysis & Insights** | Severity trend prediction | `sentence-transformers/all-MiniLM-L6-v2` | Trend Heuristics |
+
+---
+
+## 📱 Patient App Feature Roadmap
+
+### Phase 1: MVP Core Features
+1. **Medical Report Upload & Digitization**:
+   - Drag & Drop PDF / Image uploader.
+   - Hugging Face OCR pipeline (`microsoft/trocr-base-printed`) for extracting text from paper & digital lab reports.
+2. **AI Simplified Summary & ELI5 Toggle**:
+   - Key findings, normal vs. abnormal results, and warning signs powered by `google/flan-t5-large`.
+   - "Explain Like I'm 5" (ELI5) toggle for ultra-simple explanations.
+3. **Medicine Reminders & Adherence Score**:
+   - Daily schedule (8 AM, 2 PM, 8 PM), "Mark as Taken" tracking, adherence percentage score (e.g. 95%), and low stock alerts.
+4. **Health Record History & Timeline**:
+   - Searchable report repository, filtering by date/test type, and report comparison (e.g. CBC trends over time).
+5. **Emergency Information & ICE Card**:
+   - Red flag symptoms, quick dial emergency contacts, blood group, allergies, and nearest hospital guide.
+6. **User Profile & Security**:
+   - Personal demographic info, chronic conditions, and JWT authentication.
+
+### Phase 2: Engagement Features
+7. **Appointment Manager**:
+   - Doctor consultation scheduling, pre-visit checklist (e.g. 8-hour fasting requirement), and reminder alerts.
+8. **Daily Symptom Log & Insights**:
+   - Symptom logger with 1-10 severity scale, body temp inputs, and AI trend insights powered by `sentence-transformers/all-MiniLM-L6-v2`.
+9. **Multi-Lingual Translation & Voice Explanations**:
+   - Instant report translation in Hindi, Tamil, Spanish using `Helsinki-NLP/opus-mt-en-*`.
+   - Audio voice playback for low-literacy and elderly patients using Hugging Face MMS TTS (`facebook/mms-tts-*`).
+10. **Family Health Manager**:
+    - Manage health profiles for parents and children, caregiver mode, and family report sharing.
+
+### Phase 3: Advanced Features
+11. **AI Health Buddy (24/7 Chat)**:
+    - Conversational Q&A powered by Hugging Face `microsoft/biogpt`.
+12. **Medicine Delivery & Lab Test Booking**:
+    - Online medicine ordering and nearby lab package comparison.
+
+---
+
+## 👨‍⚕️ Doctor App Feature Roadmap
+
+### Phase 1: MVP Core Features
+1. **Patient Report Dashboard & Red Flag Alerts**:
+   - View uploaded patient reports with AI-highlighted abnormal values and automated red flag warnings (`Bio_ClinicalBERT`).
+2. **Digital E-Prescription Writer**:
+   - Medicine autocomplete, dosage/frequency selection, doctor advice, and instant PDF prescription generation.
+3. **Patient Management & Clinical Notes (EMR)**:
+   - Searchable patient roster, visit history, SOAP notes (Subjective, Objective, Assessment, Plan), and chronic condition history.
+4. **Appointment Schedule & Queue Management**:
+   - Patient consultation queue, status updates (scheduled, in-consultation, completed, no-show), and walk-in entry.
+5. **Quick Report Review & Specialist Notes**:
+   - 3-line AI summary per report saving doctor review time.
+
+### Phase 2: Practice & Telemedicine
+6. **Telemedicine / Video Consultation**:
+   - Virtual consultation room, screen sharing for lab report review, and in-call prescription generation.
+7. **Secure Messaging & Referral Management**:
+   - Direct doctor-patient messaging and specialist referral letters with attached diagnostic reports.
+8. **Clinic Management & Revenue Analytics**:
+   - Daily patient count, revenue stats, and common diagnoses overview.
+
+### Phase 3: Advanced Clinical AI
+9. **AI Clinical Assistant for Doctors**:
+   - Differential diagnosis suggestions, drug interaction checker, and readmission risk predictor (`Bio_ClinicalBERT`).
+
+---
+
+## 🛠️ Proposed File Changes & Component Mapping
+
+### Backend Architecture (`backend/`)
+#### [NEW] [backend/services/ai_pipeline.py](file:///e:/Medsimplify/backend/services/ai_pipeline.py)
+- Hugging Face model loader (`transformers` pipeline) for OCR (`trocr-base-printed`), NER (`biomedical-ner-all`), Summarization (`flan-t5-large`), Translation (`opus-mt-en-*`), and Clinical Q&A (`biogpt`).
+#### [MODIFY] [backend/main.py](file:///e:/Medsimplify/backend/main.py)
+- Integrate AI endpoints (`/api/ai/simplify`, `/api/ai/translate`, `/api/ai/chat`, `/api/ai/ocr`) connecting Hugging Face models to database models.
+
+### Frontend Application (`frontend/` & `backend/static/`)
+#### [MODIFY] [frontend/index.html](file:///e:/Medsimplify/frontend/index.html)
+- Add complete UI modules for ELI5 mode toggle, Voice explanations, Family member profiles, Emergency ICE card, Pre-visit checklist, Doctor EMR SOAP notes, and Telemedicine video consult layout.
+#### [MODIFY] [frontend/app.js](file:///e:/Medsimplify/frontend/app.js)
+- Wire client-side handlers for ELI5 mode, voice audio player, family profile switching, doctor SOAP note generation, and AI pipeline API connections.
+#### [MODIFY] [frontend/styles.css](file:///e:/Medsimplify/frontend/styles.css)
+- Add styling for ELI5 cards, ICE card, audio player bar, and Doctor EMR layout.
+
+---
+
+## 🧪 Verification Plan
+
+### Automated Verification
+- Run `python backend/services/ai_pipeline.py` to test Hugging Face model loading, NER extraction, and translation pipeline.
+- Execute unit tests for API endpoints `/api/ai/simplify`, `/api/reports`, `/api/medicines`, and `/api/auth`.
+
+### Manual Verification
+- Test ELI5 mode toggle in [frontend/index.html](file:///e:/Medsimplify/frontend/index.html) to verify simple vs. standard AI report text.
+- Test language selector (English, Hindi, Tamil, Spanish) and voice audio playback.
+- Test Doctor Portal E-Prescription PDF generation and patient queue updates.

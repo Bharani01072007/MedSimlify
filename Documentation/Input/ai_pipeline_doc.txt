@@ -1,0 +1,423 @@
+AI PIPELINE
+POST API/AI/SIMPLIFY
+Input I 
+given:-
+{
+  "
+raw_text
+": "Complete Blood Count & Lipid Panel:\
+nWBC
+: 6.8 x10^3/
+uL
+ (Normal: 4.0 - 11.0)\
+nRBC
+: 4.65 x10^6/
+uL
+ (Normal: 4.20 - 5.80)\
+nHgb
+: 14.2 g/dL (Normal: 13.0 - 17.0)\
+nHct
+: 42.1% (Normal: 38.0 - 50.0)\n\
+nLipid
+ Profile:\
+nTotal
+ Cholesterol: 245 mg/dL (High, Desirable: <200)\
+nTriglycerides
+: 185 mg/dL (Borderline High: 150-199)\
+nHDL
+: 38 mg/dL (Low, Desirable: >40)\
+nLDL
+ Calculated: 170 mg/dL (High, Optimal: <100)\n\
+nImpression
+: 
+Hyperlipidemia
+ with elevated LDL and reduced HDL. Recommend dietary modification and lifestyle interventions."
+}
+output I got:
+{
+  "title": "Fasting Blood Glucose & Lipid Panel Analysis",
+  "
+raw_text
+": "Complete Blood Count & Lipid Panel:\
+nWBC
+: 6.8 x10^3/
+uL
+ (Normal: 4.0 - 11.0)\
+nRBC
+: 4.65 x10^6/
+uL
+ (Normal: 4.20 - 5.80)\
+nHgb
+: 14.2 g/dL (Normal: 13.0 - 17.0)\
+nHct
+: 42.1% (Normal: 38.0 - 50.0)\n\
+nLipid
+ Profile:\
+nTotal
+ Cholesterol: 245 mg/dL (High, Desirable: <200)\
+nTriglycerides
+: 185 mg/dL (Borderline High: 150-199)\
+nHDL
+: 38 mg/dL (Low, Desirable: >40)\
+nLDL
+ Calculated: 170 mg/dL (High, Optimal: <100)\n\
+nImpression
+: 
+Hyperlipidemia
+ with elevated LDL and reduced HDL. Recommend dietary modification and lifestyle interventions.",
+  "
+extracted
+_entities
+": [
+    {
+      "entity": "HbA1c",
+      "value": "8.2 %",
+      "reference": "< 5.7 %",
+      "status": "High [Critical]"
+    },
+    {
+      "entity": "Fasting Blood Sugar",
+      "value": "165 mg/dL",
+      "reference": "70 - 99 mg/dL",
+      "status": "High"
+    },
+    {
+      "entity": "Post Prandial Sugar",
+      "value": "240 mg/dL",
+      "reference": "< 140 mg/dL",
+      "status": "High"
+    },
+    {
+      "entity": "Total Cholesterol",
+      "value": "245 mg/dL",
+      "reference": "< 200 mg/dL",
+      "status": "High"
+    },
+    {
+      "entity": "Triglycerides",
+      "value": "210 mg/dL",
+      "reference": "< 150 mg/dL",
+      "status": "High"
+    },
+    {
+      "entity": "LDL Cholesterol",
+      "value": "162 mg/dL",
+      "reference": "< 100 mg/dL",
+      "status": "High"
+    }
+  ],
+  "
+standard
+_summary
+": "Your Blood Glucose and Lipid test results show elevated levels. Your HbA1c is 8.2% (target: <5.7%) and Fasting Sugar is 165 mg/dL, indicating uncontrolled sugar levels (Diabetes Mellitus). Additionally, Total Cholesterol (245 mg/dL) and Triglycerides (210 mg/dL) are above normal reference ranges.",
+  "eli5_summary": "Imagine your bloodstream is like a smooth highway. Too much sugar is like traffic slowing down the cars, and high cholesterol is like sticky oil on the road. Eating less sweets, drinking plenty of water, taking your prescribed medicine (Metformin), and going for daily 30-minute brisk walks will clear up the highway so your body runs fast and smooth!",
+  "recommendations": [
+    "Switch to a diabetic diet low in refined carbohydrates and sugars.",
+    "Take prescribed medications (Metformin) as directed by your physician.",
+    "Engage in 30 minutes of daily physical exercise / brisk walking.",
+    "Repeat HbA1c and Lipid Profile in 8 to 12 weeks."
+  ],
+  "
+is
+_flagged
+": true,
+  "
+flagged
+_reason
+": "Total Cholesterol 245 mg/dL (HIGH) | Triglycerides 210 mg/dL (HIGH)"
+}
+When I asked with the ask 
+gemini
+ in the chrome about the output correctness:
+Output:
+Looking at the 
+Response body
+ in your Swagger UI, the output is 
+partially incorrect / hallucinated
+ by the backend pipeline.
+What is Incorrect (The Hallucinations)
+Injected Diabetes Data:
+Your input text only had 
+CBC & Lipid Panel
+ (WBC, RBC, Hgb, Hct, Cholesterol, Triglycerides, HDL, LDL).
+The response extracted 
+HbA1c (8.2%)
+, 
+Fasting Blood Sugar (165 mg/dL)
+, and 
+Post Prandial Sugar (240 mg/dL)
+. None of these tests were present in your input.
+Fabricated Medications:
+The summary, ELI5 explanation, and recommendations tell the patient to take 
+Metformin
+. Metformin was never mentioned in the doctor's impression or report.
+Mismatched Values:
+Triglycerides:
+ The input text states 185 mg/dL, but the output extracted 210 mg/dL.
+LDL Cholesterol:
+ The input text states 170 mg/dL, but the output extracted 162 mg/dL.
+CBC Omission:
+ WBC, RBC, 
+Hemoglobin
+, and 
+Hematocrit
+ were completely ignored in the entity extraction.
+Why This Happened
+This typically happens in an LLM pipeline when:
+Few-shot examples in the prompt are leaking:
+ If your prompt includes an example report about diabetes/Metformin, the model is copying those values instead of parsing the actual 
+raw_text
+.
+Mock data fallback:
+ If the AI call fails or times out, the backend might be returning a hardcoded sample response object.
+Prompt instructions are too loose:
+ The system prompt needs a strict instruction: 
+"Only extract values explicitly stated in the input text. Never assume, fabricate, or include metrics not provided."
+POST API/AI/
+translate
+input:
+{
+  "
+summary
+_text
+": "Your blood count is normal. However, your cholesterol and LDL levels are high, and your HDL is slightly low. Your doctor recommends diet modification and regular exercise.",
+  "
+target
+_lang
+": "Tamil"
+}
+output:
+{
+  "
+target
+_lang
+": "Tamil",
+  "
+translated
+_text
+": "Your blood count is normal. However, your cholesterol and LDL levels are high, and your HDL is slightly low. Your doctor recommends diet modification and regular exercise."
+}
+Gemini recommendation:
+he output is 
+incorrect
+.
+In the server response for POST /
+api
+/ai/translate:
+JSON
+{
+  "
+target
+_lang
+": "Tamil",
+  "
+translated
+_text
+": "Your blood count is normal. However, your cholesterol and LDL levels are high, and your HDL is slightly low. Your doctor recommends diet modification and regular exercise."
+}
+Why it failed
+The input specified "
+target_lang
+": "Tamil".
+The 
+translated_text
+ in the response is still completely in 
+English
+; no actual translation occurred.
+What to check in your backend
+Model Prompt / System Instruction:
+ Ensure the translation prompt clearly instructs the model to return the final text in the requested script/language (e.g., 
+"Translate the following medical summary into {
+target_lang
+} script/text directly without keeping it in English"
+).
+Missing LLM Call / Mock Passthrough:
+ Check if the endpoint handler is simply echoing 
+summary_text
+ back as 
+translated_text
+ (a stub or placeholder) rather than calling the translation service or LLM.
+API Key / Error Fallback:
+ If the external translation API call fails, make sure an error handler isn't silently catching the exception and returning the original text as a fallback.
+POST API/AI/
+soap
+input:
+{
+  "
+patient
+_name
+": "John Doe",
+  "symptoms": "Reports persistent mild fatigue over the last 3 weeks, occasional 
+lightheadedness
+ upon standing, and shortness of breath during moderate exertion.",
+  "
+lab
+_findings
+": "CBC shows 
+Hemoglobin
+ 10.5 g/dL (Low), 
+Hematocrit
+ 32% (Low), Ferritin 12 ng/mL (Low). WBC and platelet counts are within normal limits."
+}
+output:-
+{
+  "
+patient
+_name
+": "John Doe",
+  "
+soap
+_notes
+": {
+    "subjective": "Patient John Doe reports: Reports persistent mild fatigue over the last 3 weeks, occasional 
+lightheadedness
+ upon standing, and shortness of breath during moderate 
+exertion..
+",
+    "objective": "Vital signs stable. Lab Findings: CBC shows 
+Hemoglobin
+ 10.5 g/dL (Low), 
+Hematocrit
+ 32% (Low), Ferritin 12 ng/mL (Low). WBC and platelet counts are within normal 
+limits..
+",
+    "assessment": "Mild Iron Deficiency 
+Anemia
+ (ICD-10 D50.9). No active signs of acute infection.",
+    "plan": "1. Oral Ferrous 
+Sulfate
+ 200mg BD x 30 days.\n2. Dietary 
+counseling
+ for iron-rich foods.\n3. Repeat CBC in 4 weeks."
+  }
+}
+Gemini recommendation:
+The server returned 
+HTTP 200 OK
+, and the response body is 
+clinically accurate, well-structured, and fully faithful to the input data
+.
+Unlike the earlier /simplify endpoint, there are 
+no hallucinations
+ here.
+Executed Request vs. Server Response
+Request Input:
+JSON
+{
+  "
+patient
+_name
+": "John Doe",
+  "symptoms": "Reports persistent mild fatigue over the last 3 weeks, occasional 
+lightheadedness
+ upon standing, and shortness of breath during moderate exertion.",
+  "
+lab
+_findings
+": "CBC shows 
+Hemoglobin
+ 10.5 g/dL (Low), 
+Hematocrit
+ 32% (Low), Ferritin 12 ng/mL (Low). WBC and platelet counts are within normal limits."
+}
+Server Response:
+JSON
+{
+  "
+patient
+_name
+": "John Doe",
+  "
+soap
+_notes
+": {
+    "subjective": "Patient John Doe reports: Reports persistent mild fatigue over the last 3 weeks, occasional 
+lightheadedness
+ upon standing, and shortness of breath during moderate 
+exertion..
+",
+    "objective": "Vital signs stable. Lab Findings: CBC shows 
+Hemoglobin
+ 10.5 g/dL (Low), 
+Hematocrit
+ 32% (Low), Ferritin 12 ng/mL (Low). WBC and platelet counts are within normal 
+limits..
+",
+    "assessment": "Mild Iron Deficiency 
+Anemia
+ (ICD-10 D50.9). No active signs of acute infection.",
+    "plan": "1. Oral Ferrous 
+Sulfate
+ 200mg BD x 30 days.\n2. Dietary 
+counseling
+ for iron-rich foods.\n3. Repeat CBC in 4 weeks."
+  }
+}
+Breakdown of Verification
+Subjective (S):
+ Correctly captures the patient's complaints (fatigue, 
+lightheadedness
+, shortness of breath on exertion) without adding unmentioned symptoms.
+Objective (O):
+ Directly carries over the exact provided CBC lab figures (Hgb 10.5, Hct 32%, Ferritin 12 ng/mL) without hallucinating unrequested glucose, lipid, or liver tests.
+Assessment (A):
+ Provides an accurate clinical diagnosis matching low ferritin/
+hemoglobin
+ (
+Mild Iron Deficiency 
+Anemia
+) along with the proper diagnostic billing code (
+ICD-10 D50.9
+).
+Plan (P):
+ Follows standard clinical management for mild microcytic/iron deficiency 
+anemia
+ (oral iron replacement, dietary 
+counseling
+, and re-checking CBC in 4 weeks).
+Minor Polish (Optional Backend Improvement)
+In both subjective and objective, there is a minor double-period punctuation artifact at the end (..). Cleaning up the string concatenation in the backend template will keep the formatting clean.
+POST API/AI/
+chat 
+{
+  "question": "I was diagnosed with mild iron deficiency 
+anemia
+. What foods should I eat to help increase my iron levels, and what should I avoid?"
+}
+output and 
+gemini
+ recommendation:
+Looking at the server response shown in your Swagger UI for POST /
+api
+/ai/chat:
+JSON
+{
+  "question": "I was diagnosed with mild iron deficiency 
+anemia
+. What foods should I eat to help increase my iron levels, and what should I avoid?",
+  "answer": "Thank you for asking: 'I was diagnosed with mild iron deficiency 
+anemia
+. What foods should I eat to help increase my iron levels, and what should I avoid?'. 
+MedSimplify
+ AI 
+analyzed
+ your question. All your lab parameters are monitored, and your doctor has reviewed your record."
+}
+Verification: Incomplete / Mock Fallback
+Status:
+ The endpoint returned 
+200 OK
+, but the output is 
+not answering the question
+.
+Issue:
+ Instead of providing dietary advice (e.g., eating spinach, red meat, lentils, vitamin C for absorption, avoiding tea/calcium with meals), the backend returned a canned, generic confirmation stub that merely repeats the prompt.
+Root Causes to Check in Backend
+Stub / Mock Implementation:
+ Verify if /
+api
+/ai/chat is currently wired to a template string rather than invoking the LLM service.
+Missing LLM Integration:
+ If the route is supposed to call the AI model, check if the function is awaiting the model response or returning early with a placeholder dict.
+API Key / Quota Exception Catch:
+ Check if an exception handler is silently falling back to this generic boilerplate message when the external model call encounters an error or timeout.

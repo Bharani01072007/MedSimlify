@@ -1,0 +1,17 @@
+PATIENT LAB REPORT:
+Patient ID: 1
+Date: 2026-09-19
+
+Complete Blood Count (CBC):
+- White Blood Cells (WBC): 6.8 x10^3/uL (Normal: 4.0 - 11.0)
+- Red Blood Cells (RBC): 4.65 x10^6/uL (Normal: 4.20 - 5.80)
+- Hemoglobin (Hgb): 14.2 g/dL (Normal: 13.0 - 17.0)
+- Hematocrit (Hct): 42.1% (Normal: 38.0 - 50.0)
+
+Lipid Panel:
+- Total Cholesterol: 245 mg/dL (High, Desirable: <200)
+- Triglycerides: 185 mg/dL (Borderline High: 150-199)
+- HDL Cholesterol: 38 mg/dL (Low, Desirable: >40)
+- LDL Calculated: 170 mg/dL (High, Optimal: <100)
+
+Impression: Hyperlipidemia with elevated LDL and reduced HDL. Recommend dietary intervention and regular aerobic exercise.

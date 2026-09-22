@@ -1,0 +1,3 @@
+from typing import Any
+
+def declarative_base(*args: Any, **kwargs: Any) -> Any: ...

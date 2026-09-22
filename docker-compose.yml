@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://medsimplify_user:Bh01072007@db:5432/medsimplify
+      - SECRET_KEY=medsimplify_super_secret_production_key_2026
+    depends_on:
+      - db
+    restart: always
+
+  db:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: medsimplify_user
+      POSTGRES_PASSWORD: Bh01072007
+      POSTGRES_DB: medsimplify
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:

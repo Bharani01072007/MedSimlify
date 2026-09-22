@@ -1,0 +1,119 @@
+Authentication
+POST API/AUTH/REGISTER
+input:
+{
+  "email": "johndoe@example.com",
+  "password": "SecurePassword123!",
+  "
+full_name
+": "John Doe",
+  "role": "patient"
+}
+output and 
+gemini
+ recommendation:
+The register endpoint failed with an HTTP 
+422 
+Unprocessable
+ Content
+ error.
+Error Details
+JSON
+{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": [
+        "body",
+        "name"
+      ],
+      "
+msg
+": "Field required",
+      "input": {
+        "email": "johndoe@example.com",
+        "password": "SecurePassword123!",
+        "
+full_name
+": "John Doe",
+        "role": "patient"
+      }
+    }
+  ]
+}
+Root Cause
+Your 
+Pydantic
+ schema expects the key 
+"name"
+, but the payload passed 
+"
+full_name
+"
+.
+Corrected Payload to Test Again
+Replace the request body with this:
+JSON
+{
+  "email": "johndoe@example.com",
+  "password": "SecurePassword123!",
+  "name": "John Doe",
+  "role": "patient"
+}
+Once you run this, it will satisfy the "name" requirement and return the 200 OK response with the 
+access_token
+ and user details.
+POST API/AUTH/
+LOGIN
+INPUT:
+{
+  "email": "johndoe@example.com",
+  "password": "SecurePassword123!"
+}
+OUTPUT:
+The login endpoint returned an HTTP 
+401 Unauthorized
+ response.
+Executed Request & Server Response
+Request URL:
+ http://localhost:8000/api/auth/login
+Status Code:
+ 401 Unauthorized
+Response Body:
+JSON
+{
+  "detail": "Invalid email or password"
+}
+Why It Failed
+User Was Never Created:
+ The earlier registration call (/
+api
+/auth/register) failed with a 422 
+Unprocessable
+ Content validation error because of the "
+full_name
+" field name mismatch. As a result, the user johndoe@example.com was never actually inserted into the database.
+Missing User in Database:
+ When /
+api
+/auth/login checks the database for johndoe@example.com, it finds no matching user record and properly raises a 401 Invalid email or password exception.
+Fix: Complete Registration First
+Go back to 
+POST /
+api
+/auth/register
+ and execute it with the corrected payload:
+JSON
+{
+  "email": "johndoe@example.com",
+  "password": "SecurePassword123!",
+  "name": "John Doe",
+  "role": "patient"
+}
+Once that returns 200 OK (confirming the account is created), running the 
+POST /
+api
+/auth/login
+ request will succeed and return your 
+access_token
+.
