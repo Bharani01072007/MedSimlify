@@ -42,52 +42,103 @@ export const Route = createFileRoute("/assistant")({
 });
 
 /**
- * Cleanly renders markdown text (converting **bold** without raw asterisks)
+ * Cleanly renders markdown text (strips raw #, ##, ###, formats bullets, bold text, and numbered lists)
  */
 function FormattedMessageText({ content }: { content: string }) {
   if (!content) return null;
   const lines = content.split("\n");
 
+  const parseInlineFormatting = (text: string) => {
+    // Match `code` blocks or **bold** blocks
+    const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+
+    return parts.map((part, pIdx) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={pIdx} className="font-semibold text-foreground">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return (
+          <code key={pIdx} className="px-1.5 py-0.5 rounded bg-muted text-primary text-xs font-mono font-medium">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      return <span key={pIdx}>{part}</span>;
+    });
+  };
+
   return (
-    <div className="space-y-1.5 leading-relaxed text-[15px]">
-      {lines.map((line, idx) => {
-        if (!line.trim()) return <div key={idx} className="h-1" />;
+    <div className="space-y-2 leading-relaxed text-[15px]">
+      {lines.map((rawLine, idx) => {
+        const line = rawLine.trim();
+        if (!line) return <div key={idx} className="h-1.5" />;
 
-        // Match **bold text** blocks
-        const parts = line.split(/(\*\*.*?\*\*)/g);
-
-        const renderedLine = parts.map((part, pIdx) => {
-          if (part.startsWith("**") && part.endsWith("**")) {
-            const boldText = part.slice(2, -2);
-            return (
-              <strong key={pIdx} className="font-semibold text-foreground">
-                {boldText}
-              </strong>
-            );
-          }
-          return <span key={pIdx}>{part}</span>;
-        });
-
-        // Section header lines
-        if (
-          line.startsWith("### ") ||
-          line.startsWith("🩺 ") ||
-          line.startsWith("🥗 ") ||
-          line.startsWith("📊 ") ||
-          line.startsWith("📋 ") ||
-          line.startsWith("📌 ") ||
-          line.startsWith("📄 ") ||
-          line.startsWith("🔍 ")
-        ) {
-          const cleanHeader = line.startsWith("### ") ? line.replace("### ", "") : line;
+        // Header detection: # Title, ## Heading, ### Subheading
+        const headerMatch = line.match(/^(#{1,6})\s*(.*)$/);
+        if (headerMatch) {
+          const headerLevel = headerMatch[1].length;
+          const headerContent = headerMatch[2].replace(/\*\*/g, ""); // clean inner bold if any
           return (
-            <div key={idx} className="font-bold text-foreground pt-1">
-              {renderedLine}
+            <div
+              key={idx}
+              className={cn(
+                "font-bold text-foreground tracking-tight pt-2.5 pb-1",
+                headerLevel <= 2 ? "text-[16px] text-primary border-b border-border/50 pb-1.5" : "text-[15px]"
+              )}
+            >
+              {parseInlineFormatting(headerContent)}
             </div>
           );
         }
 
-        return <div key={idx}>{renderedLine}</div>;
+        // Section header icons (e.g. 🩺, 🥗, 📊, 📋, 📌, 📄, 🔍, ⚠️, 🛡️, 🌡️, 🥣, 🧠)
+        if (/^[🩺🥗📊📋📌📄🔍⚠️🛡️🌡️🥣🧠]\s/.test(line)) {
+          return (
+            <div key={idx} className="font-bold text-foreground pt-2 pb-0.5 text-[15px]">
+              {parseInlineFormatting(line)}
+            </div>
+          );
+        }
+
+        // Bullet point detection: * item or - item or • item
+        const bulletMatch = line.match(/^(\*|-|•)\s+(.*)$/);
+        if (bulletMatch) {
+          const bulletContent = bulletMatch[2];
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-1.5 text-foreground/90">
+              <span className="text-primary font-bold text-sm leading-5 select-none shrink-0">•</span>
+              <div className="flex-1 leading-relaxed">
+                {parseInlineFormatting(bulletContent)}
+              </div>
+            </div>
+          );
+        }
+
+        // Numbered list detection: 1. item or 2. item
+        const numberMatch = line.match(/^(\d+)\.\s+(.*)$/);
+        if (numberMatch) {
+          const num = numberMatch[1];
+          const numContent = numberMatch[2];
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-1.5 text-foreground/90">
+              <span className="text-primary font-semibold text-xs min-w-[16px] pt-1 select-none shrink-0">{num}.</span>
+              <div className="flex-1 leading-relaxed">
+                {parseInlineFormatting(numContent)}
+              </div>
+            </div>
+          );
+        }
+
+        // Standard paragraph line
+        return (
+          <div key={idx} className="leading-relaxed text-foreground/90">
+            {parseInlineFormatting(line)}
+          </div>
+        );
       })}
     </div>
   );
