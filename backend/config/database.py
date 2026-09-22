@@ -23,10 +23,15 @@ root_dir = os.path.dirname(backend_dir)
 sqlite_backend_db = os.path.join(backend_dir, "medsimplify.db")
 sqlite_root_db = os.path.join(root_dir, "medsimplify.db")
 
+sqlite_backend_path = sqlite_backend_db.replace("\\", "/")
+sqlite_fallback_url = f"sqlite:///{sqlite_backend_path}"
+
 PRIMARY_DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    f"sqlite:///{sqlite_backend_db.replace('\\', '/')}"
+    sqlite_fallback_url
 )
+if PRIMARY_DATABASE_URL and PRIMARY_DATABASE_URL.startswith("postgres://"):
+    PRIMARY_DATABASE_URL = PRIMARY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 logger.info(f"Connecting to database at {PRIMARY_DATABASE_URL}...")
 
@@ -52,7 +57,7 @@ try:
     logger.info(f"✅ Database connected: {DATABASE_URL}")
 except Exception as err:
     logger.warning(f"Primary database connection failed ({err}). Seamlessly falling back to absolute SQLite database.")
-    DATABASE_URL = f"sqlite:///{sqlite_backend_db.replace('\\', '/')}"
+    DATABASE_URL = sqlite_fallback_url
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

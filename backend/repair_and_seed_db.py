@@ -42,7 +42,8 @@ def repair_and_seed():
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
 
-        url = f"sqlite:///{db_path.replace('\\', '/')}"
+        clean_db_path = db_path.replace("\\", "/")
+        url = f"sqlite:///{clean_db_path}"
         local_engine = create_engine(url, connect_args={"check_same_thread": False})
         Base.metadata.create_all(bind=local_engine)
 
