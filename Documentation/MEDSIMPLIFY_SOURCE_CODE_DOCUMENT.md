@@ -215,6 +215,7 @@ uvicorn>=0.24.0
 python-multipart>=0.0.6
 pydantic>=2.0.0
 pydantic[email]>=2.0.0
+pydantic-settings>=2.0.0
 email-validator>=2.0.0
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.0

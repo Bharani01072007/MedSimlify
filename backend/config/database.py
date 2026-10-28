@@ -108,8 +108,6 @@ def auto_init_database():
     except Exception as err:
         logger.warning(f"Database auto-init note: {err}")
 
-auto_init_database()
-
 def sync_sqlite_db_files():
     """Ensure SQLite database files are safe without corrupting active GUI connection handles."""
     try:
@@ -121,6 +119,8 @@ def sync_sqlite_db_files():
                 logger.info("✅ Synchronized SQLite database for DBeaver!")
     except Exception as e:
         logger.warning(f"Sync DB file note: {e}")
+
+auto_init_database()
 
 Base = declarative_base()
 
