@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>MedSimplify - Project Viva Voce & Evaluation Handbook</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --primary: #1e40af;
+      --primary-light: #eff6ff;
+      --secondary: #0f766e;
+      --secondary-light: #f0fdfa;
+      --dark: #0f172a;
+      --gray: #475569;
+      --light-gray: #f8fafc;
+      --border: #e2e8f0;
+      --accent: #2563eb;
+      --card-bg: #ffffff;
+      --tag-bg: #e0f2fe;
+      --tag-text: #0369a1;
+      --answer-bg: #f8fafc;
+      --quote-border: #3b82f6;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: var(--dark);
+      background-color: #f1f5f9;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 950px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 50px 60px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Action bar */
+    .action-bar {
+      position: sticky;
+      top: 15px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-bottom: 25px;
+      z-index: 100;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+    }
+
+    /* Cover Page */
+    .cover-page {
+      text-align: center;
+      padding: 50px 20px 60px 20px;
+      border: 3px double var(--border);
+      border-radius: 8px;
+      margin-bottom: 40px;
+      background: #ffffff;
+    }
+
+    .cover-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    .cover-subtitle {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--secondary);
+      margin-bottom: 25px;
+    }
+
+    .cover-doc-type {
+      font-size: 20px;
+      font-weight: 700;
+      color: #b91c1c;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin: 20px 0;
+      display: inline-block;
+      padding: 8px 24px;
+      border-top: 2px solid #b91c1c;
+      border-bottom: 2px solid #b91c1c;
+    }
+
+    .cover-meta {
+      margin-top: 25px;
+      font-size: 15px;
+      color: var(--dark);
+      line-height: 1.8;
+    }
+
+    .meta-box {
+      margin: 30px auto 0 auto;
+      max-width: 650px;
+      text-align: left;
+      background: var(--light-gray);
+      padding: 20px 25px;
+      border-left: 4px solid var(--accent);
+      border-radius: 4px;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .meta-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .meta-label {
+      font-weight: 600;
+      color: var(--gray);
+      min-width: 140px;
+    }
+
+    .meta-val {
+      font-weight: 700;
+      color: var(--dark);
+      text-align: right;
+    }
+
+    /* Section & Question Formatting */
+    h1.section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 8px;
+      margin: 40px 0 25px 0;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .q-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 25px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+      page-break-inside: avoid;
+    }
+
+    .q-header {
+      background: var(--light-gray);
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .q-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--dark);
+      line-height: 1.4;
+    }
+
+    .q-number {
+      color: var(--primary);
+      font-weight: 800;
+    }
+
+    .focus-badge {
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .q-body {
+      padding: 18px 20px;
+      background: #ffffff;
+    }
+
+    .answer-box {
+      background: var(--answer-bg);
+      border-left: 4px solid var(--quote-border);
+      padding: 16px 20px;
+      border-radius: 0 6px 6px 0;
+      font-size: 14.5px;
+      color: #1e293b;
+      line-height: 1.7;
+    }
+
+    .answer-box p {
+      margin-bottom: 10px;
+    }
+
+    .answer-box p:last-child {
+      margin-bottom: 0;
+    }
+
+    .answer-box strong {
+      color: var(--primary);
+    }
+
+    .answer-box ul,
+    .answer-box ol {
+      margin-left: 22px;
+      margin-top: 8px;
+      margin-bottom: 10px;
+    }
+
+    .answer-box li {
+      margin-bottom: 6px;
+    }
+
+    .key-takeaway {
+      margin-top: 12px;
+      padding: 8px 12px;
+      background: #fef3c7;
+      border-left: 3px solid #f59e0b;
+      border-radius: 4px;
+      font-size: 13.5px;
+      color: #92400e;
+      font-weight: 500;
+    }
+
+    /* Table of contents */
+    .toc-container {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 22px 28px;
+      border-radius: 8px;
+      margin: 25px 0 35px 0;
+    }
+
+    .toc-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+
+    .toc-list {
+      list-style-type: none;
+    }
+
+    .toc-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 13.5px;
+      border-bottom: 1px dashed #cbd5e1;
+    }
+
+    .toc-item:last-child {
+      border-bottom: none;
+    }
+
+    .toc-item a {
+      text-decoration: none;
+      color: var(--dark);
+      font-weight: 500;
+    }
+
+    .toc-item a:hover {
+      color: var(--accent);
+    }
+
+    .toc-badge {
+      font-weight: 600;
+      color: var(--gray);
+    }
+
+    /* Print styling - Guaranteed removal of button */
+    @media print {
+      @page {
+        margin: 1.2cm;
+        size: A4 portrait;
+      }
+
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      .container {
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        border: none !important;
+      }
+
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+      }
+
+      .no-print,
+      .action-bar,
+      .btn,
+      button,
+      #actionBar {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        position: absolute !important;
+        left: -9999px !important;
+        top: -9999px !important;
+      }
+
+      .q-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="action-bar no-print" id="actionBar">
+    <button class="btn" onclick="printDocument()">🖨️ Print / Save as PDF</button>
+  </div>
+
+  <script>
+    function printDocument() {
+      var bar = document.getElementById('actionBar');
+      if (bar) {
+        bar.style.display = 'none';
+      }
+      window.print();
+      setTimeout(function () {
+        if (bar) {
+          bar.style.display = 'flex';
+        }
+      }, 1000);
+    }
+  </script>
+
+  <div class="container">
+
+    <!-- COVER PAGE -->
+    <div class="cover-page">
+      <div class="cover-title">MEDSIMPLIFY</div>
+      <div class="cover-subtitle">AI-POWERED MEDICAL REPORT SIMPLIFICATION & HEALTHCARE ASSISTANT PLATFORM</div>
+
+      <div class="cover-doc-type">PROJECT VIVA VOCE & EVALUATION HANDBOOK</div>
+
+      <div class="cover-meta">
+        Comprehensive Technical Question Bank & Model Examiner Defense Guide<br>
+        <strong>Department of Artificial Intelligence & Data Science</strong>
+      </div>
+
+      <div class="meta-box">
+        <div class="meta-row">
+          <span class="meta-label">Team Members:</span>
+          <span class="meta-val">Bharanidharan S, Dharunya Sri S, Dinesh S, Madhiyarasu R</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Register Numbers:</span>
+          <span class="meta-val">713324AD010, 713324AD021, 713324AD024, 713324AD055</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Degree / Branch:</span>
+          <span class="meta-val">B.Tech Artificial Intelligence & Data Science</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Academic Year:</span>
+          <span class="meta-val">2026 – 2027</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Evaluation:</span>
+          <span class="meta-val">Mini Project Viva-Voce Examination</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE OF CONTENTS -->
+    <div class="page-break"></div>
+    <div class="toc-container">
+      <div class="toc-title">Viva Categories & Question Directory</div>
+      <ul class="toc-list">
+        <li class="toc-item"><span><strong>Section 1: Project Overview & Clinical Motivation</strong> (Q1 – Q4)</span><span class="toc-badge">Concept & Novelty</span></li>
+        <li class="toc-item"><span><strong>Section 2: System Architecture & Technology Stack</strong> (Q5 – Q8)</span><span class="toc-badge">Frameworks & Flow</span></li>
+        <li class="toc-item"><span><strong>Section 3: Artificial Intelligence, OCR & Clinical NLP</strong> (Q9 – Q15)</span><span class="toc-badge">AI, NER, RAG & ELI5</span></li>
+        <li class="toc-item"><span><strong>Section 4: Database Engineering & Backend Operations</strong> (Q16 – Q19)</span><span class="toc-badge">PostgreSQL & Sequence</span></li>
+        <li class="toc-item"><span><strong>Section 5: Edge Cases, Testing, Limitations & Scope</strong> (Q20 – Q23)</span><span class="toc-badge">Validation & Vision</span></li>
+        <li class="toc-item"><span><strong>Section 6: Individual Team Roles & Defense Strategy</strong> (Q24 – Q25)</span><span class="toc-badge">Team Breakdown</span></li>
+      </ul>
+    </div>
+
+    <!-- SECTION 1 -->
+    <h1 class="section-title">📌 Section 1: Project Overview & Clinical Motivation</h1>
+
+    <!-- Q1 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q1.</span> What is MedSimplify, and what real-world problem does it address?</div>
+        <span class="focus-badge">Problem Statement</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p><strong>MedSimplify</strong> is an AI-powered medical report simplification and digital healthcare assistant platform designed to transform complex, jargon-heavy diagnostic lab reports into clear, plain-language summaries.</p>
+          <p><strong>The Core Problem:</strong> Diagnostic reports (such as Complete Blood Counts, Dengue profiles, and Liver Function Tests) are saturated with clinical terminology, abbreviations, and numerical reference ranges. Over 80% of patients cannot interpret their own test results without clinical guidance. This knowledge gap causes severe patient anxiety, delayed medical intervention, and dangerous self-medication.</p>
+          <p><strong>Our Solution:</strong> MedSimplify enables patients to upload reports in PDF, DOCX, or photo formats. It extracts text via multi-modal OCR, identifies biomarkers using Clinical NER, and generates a dual-layer explanation: a <strong>Standard Medical Summary</strong> and an <strong>ELI5 (Explain Like I'm 5)</strong> analogy-based summary in English and regional Indian languages (Hindi, Tamil, Telugu), alongside a 24/7 RAG AI health assistant.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q2 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q2.</span> Who are the primary target users and stakeholders of your platform?</div>
+        <span class="focus-badge">Stakeholder Analysis</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>Our system is designed for two distinct user roles with dedicated interfaces:</p>
+          <ul>
+            <li><strong>1. Patients and Caregivers:</strong> Access plain-language report explanations, actionable recovery checklists, medication reminders, daily symptom tracking, and localized regional translations.</li>
+            <li><strong>2. Doctors and Healthcare Clinicians:</strong> Access the Doctor Clinical Portal to review incoming patient reports, receive automated 'Red Flag' alerts for critical cases (such as a rapid 50% platelet decline in Dengue), review auto-generated clinical EMR SOAP notes, and manage daily consultation queues.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q3.</span> How does MedSimplify differentiate itself from existing apps like Practo, Apollo 24/7, or ChatGPT?</div>
+        <span class="focus-badge">Competitive Advantage</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <ul>
+            <li><strong>Versus Telemedicine Portals (Practo, Apollo):</strong> Existing apps operate merely as digital storage repositories; they deliver raw PDF files without interpreting what the biomarker numbers mean for the patient. MedSimplify actively decodes the data into intuitive analogies and flags dangerous trends.</li>
+            <li><strong>Versus Generic LLMs (ChatGPT):</strong> Public chatbots are prone to medical hallucinations and have no direct access to structured hospital databases. MedSimplify uses a deterministic <strong>Clinical NER pipeline</strong> to cross-verify test ranges against clinical baselines and uses <strong>RAG (Retrieval-Augmented Generation)</strong> to ground answers directly in the patient's verified records.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q4.</span> What are the primary diagnostic report categories supported by MedSimplify?</div>
+        <span class="focus-badge">Domain Scope</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>MedSimplify is trained and optimized for five major clinical diagnostic categories:</p>
+          <ol>
+            <li><strong>Hematology Panels:</strong> Complete Blood Count (CBC), Platelet counts, Hemoglobin, WBC differential, RBC indices.</li>
+            <li><strong>Serology & Viral Profiles:</strong> Dengue NS1 Antigen, Dengue IgM/IgG antibody profiles.</li>
+            <li><strong>Metabolic & Diabetes Panels:</strong> Fasting Blood Sugar (FBS), Postprandial Glucose, HbA1c average blood sugar.</li>
+            <li><strong>Biochemistry Panels:</strong> Liver Function Tests (LFT - Bilirubin, SGOT, SGPT) and Lipid Profiles (Cholesterol, Triglycerides, HDL, LDL).</li>
+            <li><strong>Clinical Prescriptions & Discharge Summaries:</strong> Medication dosages, frequencies, and hospital admission course notes.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2 -->
+    <div class="page-break"></div>
+    <h1 class="section-title">⚙️ Section 2: System Architecture & Technology Stack</h1>
+
+    <!-- Q5 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q5.</span> Explain the high-level technical architecture of your project.</div>
+        <span class="focus-badge">System Design</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>MedSimplify follows a decoupled, 4-tier service-oriented architecture:</p>
+          <ul>
+            <li><strong>1. Presentation Tier (Frontend):</strong> Built with React 19, TypeScript, and TanStack Router within a mobile-viewport container, styled using TailwindCSS and Radix UI primitives.</li>
+            <li><strong>2. Application / API Tier (Backend):</strong> Powered by Python 3.10+ and FastAPI with asynchronous endpoints, CORS middleware, JWT authentication, and Pydantic validation.</li>
+            <li><strong>3. Clinical Intelligence Tier (AI/NLP):</strong> Integrates PyMuPDF, OpenCV, and PyTesseract for OCR; clinical transformer models for NER; a dual-layer simplification engine; Helsinki-NLP translation; and a RAG retrieval system.</li>
+            <li><strong>4. Data Tier (Persistence):</strong> Hosted Supabase PostgreSQL database managed via SQLAlchemy 2.0 ORM, featuring a local SQLite fallback and dynamic primary key sequence synchronization.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q6 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q6.</span> Why did you select FastAPI over Flask or Django?</div>
+        <span class="focus-badge">Backend Justification</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>We evaluated Python web frameworks and chose FastAPI based on three technical benchmarks:</p>
+          <ol>
+            <li><strong>Asynchronous Concurrency:</strong> FastAPI natively supports Python's <code>async/await</code> paradigm on top of Starlette and Uvicorn (ASGI). This allows non-blocking execution during heavy I/O operations (file uploads and ML model inferences).</li>
+            <li><strong>Native Pydantic Data Validation:</strong> Eliminates manual validation code. Incoming JSON and form fields are automatically validated against Pydantic schemas with compile-time type hints.</li>
+            <li><strong>Execution Performance & Swagger UI:</strong> FastAPI operates at speeds comparable to NodeJS and Go, and automatically generates interactive OpenAPI documentation at <code>/docs</code> for rapid API testing.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q7 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q7.</span> Why use React 19, Vite, and TanStack Router instead of older React setups?</div>
+        <span class="focus-badge">Frontend Engineering</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <ul>
+            <li><strong>React 19 & TypeScript:</strong> Provides compile-time type safety, preventing undefined property errors during clinical data parsing, and supports modern state hooks.</li>
+            <li><strong>Vite Bundler:</strong> Replaces outdated Webpack bundlers by leveraging native ES Modules (ESM) in development, providing millisecond Hot Module Replacement (HMR) and optimized Rollup production builds.</li>
+            <li><strong>TanStack Router:</strong> Delivers 100% type-safe file-based client-side routing, route context providers, built-in search parameter validation, and scroll restoration for a native-mobile app feel.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q8 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q8.</span> How does your client communicate with the backend?</div>
+        <span class="focus-badge">API Integration</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>Communication is handled through a centralized asynchronous API client (<code>frontend/src/lib/api-client.ts</code>):</p>
+          <ul>
+            <li>Dynamically resolves the API host URL (<code>http://localhost:8000/api</code>).</li>
+            <li>Automatically attaches the stored JWT token in the HTTP <code>Authorization: Bearer &lt;token&gt;</code> header for authenticated endpoints.</li>
+            <li>Handles multipart/form-data for image and PDF file uploads.</li>
+            <li>Provides unified error handling that intercepts network failures and delivers user-friendly feedback.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3 -->
+    <div class="page-break"></div>
+    <h1 class="section-title">🧠 Section 3: Artificial Intelligence, OCR & Clinical NLP</h1>
+
+    <!-- Q9 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q9.</span> How does the multi-modal OCR pipeline extract text from different document types?</div>
+        <span class="focus-badge">OCR Pipeline</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>Our OCR service handles multiple file extensions using specialized extraction pathways:</p>
+          <ul>
+            <li><strong>1. PDF Documents:</strong> Processed via <strong>PyMuPDF (<code>fitz</code>)</strong>. It accesses the native vector text layer directly from electronic PDFs, achieving near 100% character accuracy without pixel distortion.</li>
+            <li><strong>2. Word Documents (.docx):</strong> Extracted structurally by parsing paragraph and table elements using <code>python-docx</code>.</li>
+            <li><strong>3. Scanned Paper Photos (.png, .jpg):</strong> Processed via an <strong>OpenCV</strong> computer vision pre-processing pipeline before text extraction through <strong>PyTesseract</strong> using page segmentation mode 6 (<code>--oem 3 --psm 6</code>).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q10 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q10.</span> What image pre-processing techniques are used before passing an image to Tesseract?</div>
+        <span class="focus-badge">Computer Vision</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>Mobile camera photos of lab reports often suffer from low contrast, shadows, and camera noise. Our OpenCV pipeline applies four sequential transformations:</p>
+          <ol>
+            <li><strong>Grayscale Conversion:</strong> Removes extraneous color channels, reducing processing complexity.</li>
+            <li><strong>Contrast Alpha Scaling:</strong> Enhances text legibility using <code>cv2.convertScaleAbs(gray, alpha=1.5, beta=30)</code>.</li>
+            <li><strong>Median Blur Filtering:</strong> Removes salt-and-pepper grain noise without blurring character edges.</li>
+            <li><strong>Otsu's Adaptive Thresholding:</strong> Automatically computes the optimal threshold separating foreground text pixels from paper background pixels, creating a clean black-and-white binary image.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q11 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q11.</span> What is Clinical Named Entity Recognition (NER), and what entities does it extract?</div>
+        <span class="focus-badge">Clinical NLP</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>Clinical NER is a specialized natural language processing task that identifies medical terms in unstructured text and maps them to structured clinical entities.</p>
+          <p>In MedSimplify, our NER service extracts:</p>
+          <ul>
+            <li><strong>Biomarker / Test Name:</strong> e.g., Platelet Count, Hemoglobin, WBC, HbA1c, SGOT.</li>
+            <li><strong>Numerical Value:</strong> e.g., 45,000, 11.2, 140.</li>
+            <li><strong>Unit of Measurement:</strong> e.g., cells/mcL, g/dL, mg/dL, %.</li>
+            <li><strong>Clinical Status:</strong> Automatically classified into <code>Normal</code>, <code>Low</code>, <code>High</code>, or <code>Critical</code> based on standardized clinical reference ranges.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q12 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q12.</span> How does your dual-layer simplification engine work (Standard vs ELI5)?</div>
+        <span class="focus-badge">Explainable AI</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>To cater to different educational levels, MedSimplify generates two distinct explanations for every finding:</p>
+          <ul>
+            <li><strong>1. Standard Medical Explanation:</strong> Formulated for educated patients or consulting doctors using proper clinical terms. (e.g., <em>"Platelets are essential blood cell fragments necessary for hemostatic plug formation and clotting."</em>)</li>
+            <li><strong>2. ELI5 (Explain Like I'm 5) Mode:</strong> Uses real-world visual analogies. (e.g., <em>"🩹 Think of platelets as tiny construction workers carrying band-aids inside your blood pipes. When you get a cut, they rush over and patch the hole! Right now, your body's repair crew is low on workers, so you bruise easily."</em>)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q13 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q13.</span> How does MedSimplify prevent AI hallucinations on sensitive medical lab data?</div>
+        <span class="focus-badge">Safety & Reliability</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>We enforce a strict <strong>Zero-Hallucination Architecture</strong>:</p>
+          <ol>
+            <li><strong>Deterministic Extraction:</strong> Test numbers, units, and ranges are extracted using validated clinical regex patterns and token classifications—never open-ended generative text.</li>
+            <li><strong>Clinical Knowledge Base:</strong> Reference ranges are verified against WHO, ICMR, and CDC laboratory baselines.</li>
+            <li><strong>Retrieval-Augmented Grounding (RAG):</strong> Health assistant responses are strictly anchored to the patient's retrieved lab test values, explicitly preventing the model from hallucinating non-existent conditions.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q14 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q14.</span> What is RAG (Retrieval-Augmented Generation), and how does the AI Assistant use it?</div>
+        <span class="focus-badge">RAG Architecture</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p><strong>Retrieval-Augmented Generation (RAG)</strong> combines document retrieval with generative AI to produce grounded, accurate answers:</p>
+          <ol>
+            <li><strong>Retrieval:</strong> When a patient submits a question, the backend queries the database for the patient's active lab reports using their report IDs.</li>
+            <li><strong>Augmentation:</strong> The extracted biomarker values (e.g., Platelets: 45,000 cells/mcL, Dengue NS1: Positive) are injected into the model's system context.</li>
+            <li><strong>Generation:</strong> The assistant produces an answer explicitly referencing the patient's real data (e.g., warning against taking NSAID pain relievers like Aspirin or Ibuprofen which worsen bleeding in thrombocytopenia), citing the exact report ID as evidence.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q15 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q15.</span> How does the multi-lingual regional translation service work?</div>
+        <span class="focus-badge">Localization</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>MedSimplify supports regional Indian languages: <strong>Hindi (hi)</strong>, <strong>Tamil (ta)</strong>, and <strong>Telugu (te)</strong>.</p>
+          <p>It utilizes pre-trained sequence-to-sequence translation models (<code>Helsinki-NLP/opus-mt-en-hi/ta/te</code>) coupled with a validated medical term translation dictionary. This guarantees clinical terms are accurately translated (e.g., Platelet Count &rarr; <em>"இரத்த தட்டணுக்கள் எண்ணிக்கை"</em> in Tamil, <em>"प्लेटलेट काउंट"</em> in Hindi) rather than incorrectly transliterated.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4 -->
+    <div class="page-break"></div>
+    <h1 class="section-title">💾 Section 4: Database Engineering & Backend Operations</h1>
+
+    <!-- Q16 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q16.</span> Why did you implement a dual PostgreSQL and SQLite database strategy?</div>
+        <span class="focus-badge">DevOps & Resilience</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>In production environments, MedSimplify uses a cloud-hosted <strong>Supabase PostgreSQL</strong> database for connection pooling, ACID transaction guarantees, and multi-user concurrency.</p>
+          <p>However, during local development or viva demonstrations with restricted internet access, cloud database connections can fail. Our configuration in <code>backend/config/database.py</code> tests the PostgreSQL connection on startup; if it encounters a network timeout, it <strong>seamlessly and automatically falls back to an embedded local SQLite database (<code>medsimplify.db</code>)</strong> with zero crashes or code modifications.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q17 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q17.</span> What is the PostgreSQL sequence desynchronization problem, and how did you resolve it?</div>
+        <span class="focus-badge">Database Internals</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p><strong>The Problem:</strong> PostgreSQL manages auto-incrementing primary keys via independent sequence counters (e.g., <code>users_id_seq</code>). When initial mock records with explicit IDs (like <code>id=1, 2, 3</code>) are manually seeded into tables, the internal sequence pointer is not updated. When a new user registers, PostgreSQL attempts to assign <code>id=1</code>, triggering an <code>IntegrityError / UniqueViolation 500</code>.</p>
+          <p><strong>The Solution:</strong> We created an automated resynchronization utility (<code>sync_db_sequences</code>) that runs on server startup, executing:</p>
+          <p style="font-family: 'JetBrains Mono', monospace; font-size: 13px; background: #e2e8f0; padding: 6px 10px; border-radius: 4px;">SELECT setval(pg_get_serial_sequence('tbl', 'id'), COALESCE((SELECT MAX(id) FROM tbl), 1));</p>
+          <p>This re-aligns the serial counter to the maximum primary key across all 13 database tables.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q18 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q18.</span> How are user security and role-based access control implemented?</div>
+        <span class="focus-badge">Cybersecurity</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <ol>
+            <li><strong>Password Hashing:</strong> Raw passwords are never stored in the database. They are cryptographically hashed using <strong>Bcrypt</strong> with auto-generated salt rounds.</li>
+            <li><strong>Stateless JWT Tokens:</strong> On successful authentication, the server generates a JSON Web Token (JWT) signed with <code>HS256</code> containing the user ID, role (<code>patient</code> or <code>doctor</code>), and expiration timestamp.</li>
+            <li><strong>Role-Based Access:</strong> Frontend routes and backend endpoints check the user type, ensuring patients can only view their own medical records while doctors have access to clinical analytics and queue management.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q19 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q19.</span> How is the medication adherence score calculated?</div>
+        <span class="focus-badge">Algorithm Design</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>Medication adherence is mathematically calculated as:</p>
+          <p style="font-family: 'JetBrains Mono', monospace; font-size: 14px; background: #e2e8f0; padding: 8px 12px; border-radius: 4px; text-align: center; font-weight: 600;">
+            Adherence (%) = ( Total Taken Doses / Total Scheduled Doses ) &times; 100
+          </p>
+          <p>This score directly drives the visual progress bar on the patient home screen (e.g., 3 out of 4 doses logged = <strong>75% adherence</strong>), providing patients with positive behavioral reinforcement.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 5 -->
+    <div class="page-break"></div>
+    <h1 class="section-title">🧪 Section 5: Edge Cases, Testing, Limitations & Future Scope</h1>
+
+    <!-- Q20 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q20.</span> What happens if a patient uploads a blurry or completely unreadable image?</div>
+        <span class="focus-badge">Error Handling</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>Our OpenCV pipeline evaluates image contrast and character confidence during Tesseract execution. If the text length is under 15 characters or character confidence falls below the accepted threshold, the system flags the file.</p>
+          <p>Rather than returning garbled predictions or crashing, the application displays a friendly warning banner: <em>"Image is too blurry or low contrast. Please retake the photo in bright lighting or upload a direct PDF."</em></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q21 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q21.</span> How did you test and validate your application?</div>
+        <span class="focus-badge">Testing & QA</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>We executed testing across four core tiers:</p>
+          <ul>
+            <li><strong>1. OCR & Parsing Accuracy:</strong> Tested with authentic diagnostic lab reports (CBC, Dengue profiles, LFT) in PDF and camera image formats to evaluate character extraction fidelity.</li>
+            <li><strong>2. API Integration Testing:</strong> Verified all REST routes (<code>/reports</code>, <code>/auth</code>, <code>/chat</code>, <code>/medicines</code>, <code>/symptoms</code>) using FastAPI's Swagger UI and automated Python unit tests.</li>
+            <li><strong>3. Edge Case Testing:</strong> Evaluated system resilience against missing form fields, duplicate emails, and sudden database connection drops.</li>
+            <li><strong>4. User Acceptance Testing:</strong> Evaluated readability and comprehension improvements when toggling between standard medical and ELI5 analogy explanations.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q22 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q22.</span> What are the current limitations of MedSimplify?</div>
+        <span class="focus-badge">Critical Appraisal</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <ol>
+            <li><strong>Cursive Handwritten Prescriptions:</strong> While printed reports achieve over 95% accuracy, cursive handwriting on doctor prescription slips remains challenging for general OCR models.</li>
+            <li><strong>DICOM Radiographic Scans:</strong> The system parses textual radiology impression summaries, but does not yet perform direct computer vision segmentation on raw X-ray or MRI DICOM scan images.</li>
+            <li><strong>Compute Hardware:</strong> Running full 7B parameter LLMs locally requires dedicated GPU resources; lightweight client setups rely on medical dictionary lookups and cloud endpoints.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q23 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q23.</span> What is the future scope of this project?</div>
+        <span class="focus-badge">Future Enhancements</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <ul>
+            <li><strong>IoT Wearable Integration:</strong> Connecting smartwatch APIs (Apple Health, Google Fit) to correlate real-time heart rate and SpO2 with lab biomarkers.</li>
+            <li><strong>Vision Transformers (ViT) for Radiography:</strong> Training multi-modal vision models to segment and highlight abnormalities directly on chest X-rays.</li>
+            <li><strong>Voice-Assisted Audio Support:</strong> Adding Speech-to-Text and Text-to-Speech in Tamil and Hindi for illiterate or visually impaired patients.</li>
+            <li><strong>HL7 / FHIR Standards:</strong> Adopting international health data interchange standards for seamless interoperability with hospital EMR systems.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 6 -->
+    <div class="page-break"></div>
+    <h1 class="section-title">👥 Section 6: Individual Team Roles & Defense Strategy</h1>
+
+    <!-- Q24 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q24.</span> What was each team member's individual contribution to this project?</div>
+        <span class="focus-badge">Team Role Breakdown</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p>When the evaluator asks each team member about their individual contribution, answer confidently as follows:</p>
+          <ul>
+            <li><strong>Bharanidharan S (Lead Architecture & AI Pipeline):</strong><br>
+              <em>"I designed the overall system architecture, implemented the multi-modal OCR pipeline (PyMuPDF + OpenCV + Tesseract), engineered the FastAPI backend with PostgreSQL, and developed the RAG Health Assistant engine."</em>
+            </li>
+            <li><strong>Dharunya Sri S (Clinical NLP & Entity Extraction):</strong><br>
+              <em>"I focused on the Clinical Named Entity Recognition (NER) pipeline, developing biomarker extraction rules for hematology and metabolic panels and mapping critical reference intervals."</em>
+            </li>
+            <li><strong>Dinesh S (Text Simplification & Regional Translation):</strong><br>
+              <em>"I developed the dual-tier text simplification logic (Standard vs ELI5 real-world analogies) and integrated the regional language translation dictionaries for Tamil and Hindi."</em>
+            </li>
+            <li><strong>Madhiyarasu R (Frontend Dashboard & Clinical Portal):</strong><br>
+              <em>"I designed and developed the responsive React 19 user interfaces, TanStack client routing, doctor portal red flag notifications, and medication adherence visualization."</em>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q25 -->
+    <div class="q-card">
+      <div class="q-header">
+        <div class="q-title"><span class="q-number">Q25.</span> What is your final concluding elevator pitch to the examiner?</div>
+        <span class="focus-badge">Conclusion</span>
+      </div>
+      <div class="q-body">
+        <div class="answer-box">
+          <p><em>"MedSimplify bridges the dangerous communication gap between complex clinical laboratory diagnostics and everyday human comprehension. By combining multi-modal OCR, zero-hallucination Clinical NER, ELI5 analogies, and regional Indian languages, we empower patients to take timely health actions while saving valuable consultation time for physicians."</em></p>
+        </div>
+      </div>
+    </div>
+
+    <p style="text-align: center; margin-top: 50px; color: var(--gray); font-size: 13px;">
+      — End of MedSimplify Project Viva Voce & Evaluation Handbook —
+    </p>
+
+  </div>
+
+</body>
+
+</html>

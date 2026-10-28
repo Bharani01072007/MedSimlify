@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>MedSimplify - Mini Project Source Code Documentation</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+    :root {
+      --primary: #1e40af;
+      --primary-light: #eff6ff;
+      --secondary: #0f766e;
+      --dark: #0f172a;
+      --gray: #475569;
+      --light-gray: #f8fafc;
+      --border: #e2e8f0;
+      --code-bg: #f1f5f9;
+      --accent: #2563eb;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      color: var(--dark);
+      background-color: #f1f5f9;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 950px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 50px 60px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Action bar */
+    .action-bar {
+      position: sticky;
+      top: 15px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-bottom: 25px;
+      z-index: 100;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+      font-size: 14px;
+    }
+
+    .btn:hover {
+      background: #1d4ed8;
+    }
+
+    /* Cover Page */
+    .cover-page {
+      text-align: center;
+      padding: 60px 20px 80px 20px;
+      border: 3px double var(--border);
+      border-radius: 8px;
+      margin-bottom: 40px;
+    }
+
+    .cover-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .cover-subtitle {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--secondary);
+      margin-bottom: 30px;
+    }
+
+    .cover-doc-type {
+      font-size: 20px;
+      font-weight: 700;
+      color: #b91c1c;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin: 25px 0;
+      display: inline-block;
+      padding: 8px 24px;
+      border-top: 2px solid #b91c1c;
+      border-bottom: 2px solid #b91c1c;
+    }
+
+    .cover-meta {
+      margin-top: 40px;
+      font-size: 15px;
+      color: var(--dark);
+      line-height: 1.9;
+    }
+
+    .meta-box {
+      margin: 40px auto 0 auto;
+      max-width: 600px;
+      text-align: left;
+      background: var(--light-gray);
+      padding: 20px 25px;
+      border-left: 4px solid var(--accent);
+      border-radius: 4px;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .meta-label {
+      font-weight: 600;
+      color: var(--gray);
+    }
+
+    .meta-val {
+      font-weight: 700;
+      color: var(--dark);
+    }
+
+    /* Typography & Sections */
+    h1.section-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary);
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 8px;
+      margin: 40px 0 20px 0;
+      text-transform: uppercase;
+    }
+
+    h2.subsection-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--dark);
+      margin: 24px 0 10px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .file-badge {
+      display: inline-block;
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    p,
+    li {
+      font-size: 14.5px;
+      color: #334155;
+      margin-bottom: 10px;
+    }
+
+    ul,
+    ol {
+      margin-left: 25px;
+      margin-bottom: 15px;
+    }
+
+    /* Code Blocks */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', Consolas, monospace;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #1e293b;
+      margin: 10px 0 20px 0;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', Consolas, monospace;
+    }
+
+    .comment {
+      color: #64748b;
+      font-style: italic;
+    }
+
+    .keyword {
+      color: #8b5cf6;
+      font-weight: 600;
+    }
+
+    .string {
+      color: #059669;
+    }
+
+    .func {
+      color: #2563eb;
+      font-weight: 600;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0 25px 0;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      text-align: left;
+    }
+
+    th {
+      background-color: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    tr:nth-child(even) {
+      background-color: #fafafa;
+    }
+
+    /* Table of contents */
+    .toc-container {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 25px 30px;
+      border-radius: 8px;
+      margin: 30px 0 40px 0;
+    }
+
+    .toc-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .toc-list {
+      list-style-type: none;
+      margin-left: 0;
+    }
+
+    .toc-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 14px;
+      border-bottom: 1px dashed #cbd5e1;
+    }
+
+    .toc-item:last-child {
+      border-bottom: none;
+    }
+
+    .toc-item a {
+      text-decoration: none;
+      color: var(--dark);
+      font-weight: 500;
+    }
+
+    .toc-item a:hover {
+      color: var(--accent);
+    }
+
+    .toc-pg {
+      font-weight: 600;
+      color: var(--gray);
+    }
+
+    /* Print styling - Guaranteed removal of action bar & print button */
+    @media print {
+      @page {
+        margin: 1.2cm;
+        size: A4 portrait;
+      }
+
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      .container {
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        border: none !important;
+      }
+
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+      }
+
+      .no-print,
+      .action-bar,
+      .btn,
+      button,
+      #actionBar {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        position: absolute !important;
+        left: -9999px !important;
+        top: -9999px !important;
+      }
+
+      pre {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="action-bar no-print" id="actionBar">
+    <button class="btn" onclick="printDocument()">🖨️ Print / Save as PDF</button>
+  </div>
+
+  <script>
+    function printDocument() {
+      var bar = document.getElementById('actionBar');
+      if (bar) {
+        bar.style.display = 'none';
+      }
+      window.print();
+      setTimeout(function() {
+        if (bar) {
+          bar.style.display = 'flex';
+        }
+      }, 1000);
+    }
+  </script>
+
+  <div class="container">
+
+    <!-- COVER PAGE -->
+    <div class="cover-page">
+      <div class="cover-title">MEDSIMPLIFY</div>
+      <div class="cover-subtitle">AI-POWERED MEDICAL REPORT SIMPLIFICATION & HEALTHCARE ASSISTANT PLATFORM</div>
+
+      <div class="cover-doc-type">SOURCE CODE COMPENDIUM & RECORD</div>
+
+      <div class="cover-meta">
+        Submitted in partial fulfillment of the requirements for the award of degree of<br>
+        <strong>B.Tech Artificial Intelligence & Data Science </strong>
+      </div>
+
+      <div class="meta-box">
+        <div class="meta-row">
+          <span class="meta-label">Student Name:</span>
+          <span class="meta-val">Bharanidharan S,Dharunya Sri S,Dinesh S,Madhiyarasu R </span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Register / Roll Number:</span>
+          <span class="meta-val">713324AD010,021,024,055</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Academic Year:</span>
+          <span class="meta-val">2026 – 2027</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Department:</span>
+          <span class="meta-val">Artificial Intelligence & Data Science</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE OF CONTENTS -->
+    <div class="page-break"></div>
+    <div class="toc-container">
+      <div class="toc-title">Table of Contents</div>
+      <ul class="toc-list">
+        <li class="toc-item"><span><strong>1. System Overview & Architecture Flow</strong></span><span
+            class="toc-pg">01</span></li>
+        <li class="toc-item"><span><strong>2. System Configuration & Dependencies</strong></span><span
+            class="toc-pg">03</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;2.1 Python Backend Dependencies
+            (requirements.txt)</span><span class="toc-pg">03</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;2.2 Frontend Package Manifest (package.json)</span><span
+            class="toc-pg">04</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;2.3 Docker Compose Multi-Container Orchestration</span><span
+            class="toc-pg">05</span></li>
+        <li class="toc-item"><span><strong>3. Database Engine & ORM Data Models</strong></span><span
+            class="toc-pg">06</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.1 Database Connection & Resync Engine
+            (database.py)</span><span class="toc-pg">06</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.2 User Authentication & Identity Model
+            (user.py)</span><span class="toc-pg">08</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.3 Patient Profile Entity (patient_profile.py)</span><span
+            class="toc-pg">09</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.4 Doctor Profile Entity (doctor_profile.py)</span><span
+            class="toc-pg">10</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.5 Diagnostic Medical Report Entity
+            (medical_report.py)</span><span class="toc-pg">11</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.6 Medication Reminders & Logs
+            (medicine_reminder.py)</span><span class="toc-pg">12</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.7 Consultation & Telemedicine (appointment.py)</span><span
+            class="toc-pg">13</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.8 Patient Symptom Log Entity (symptom.py)</span><span
+            class="toc-pg">14</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;3.9 Clinical Messaging & Chat Storage (chat.py)</span><span
+            class="toc-pg">15</span></li>
+        <li class="toc-item"><span><strong>4. Artificial Intelligence & Clinical NLP Pipeline</strong></span><span
+            class="toc-pg">16</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;4.1 Multi-Modal OCR Text Extraction
+            (ocr_service.py)</span><span class="toc-pg">16</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;4.2 Document Classification Engine
+            (document_classifier.py)</span><span class="toc-pg">18</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;4.3 Clinical Named Entity Recognition
+            (medical_ner.py)</span><span class="toc-pg">19</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;4.4 Plain-Language & ELI5 Simplification
+            (text_simplifier.py)</span><span class="toc-pg">20</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;4.5 Regional Language Translation Service
+            (translator.py)</span><span class="toc-pg">21</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;4.6 RAG Health Assistant Engine (rag_service.py)</span><span
+            class="toc-pg">22</span></li>
+        <li class="toc-item"><span><strong>5. Backend RESTful API Routers</strong></span><span class="toc-pg">23</span>
+        </li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;5.1 Main Server Application & Middleware
+            (main.py)</span><span class="toc-pg">23</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;5.2 User Authentication Controller (auth.py)</span><span
+            class="toc-pg">25</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;5.3 Medical Report Upload & Parsing (reports.py)</span><span
+            class="toc-pg">27</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;5.4 AI Assistant & Clinical Chat Router (chat.py)</span><span
+            class="toc-pg">29</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;5.5 Medicine Adherence Router (medicines.py)</span><span
+            class="toc-pg">31</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;5.6 Clinical Appointment Booking
+            (appointments.py)</span><span class="toc-pg">32</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;5.7 Symptom Tracker Router (symptoms.py)</span><span
+            class="toc-pg">33</span></li>
+        <li class="toc-item"><span><strong>6. Frontend Web Architecture & UI Routes</strong></span><span
+            class="toc-pg">34</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;6.1 Application Bootstrapping (main.tsx &
+            router.tsx)</span><span class="toc-pg">34</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;6.2 Asynchronous Universal API Client
+            (api-client.ts)</span><span class="toc-pg">35</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;6.3 Patient Home Dashboard (home.tsx)</span><span
+            class="toc-pg">37</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;6.4 Multi-Format Report Upload Screen
+            (upload.tsx)</span><span class="toc-pg">39</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;6.5 Multi-Stage AI Pipeline Screen
+            (analyzing.tsx)</span><span class="toc-pg">41</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;6.6 Report Analysis & ELI5 Output (results.tsx)</span><span
+            class="toc-pg">43</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;6.7 RAG AI Health Assistant Chat (assistant.tsx)</span><span
+            class="toc-pg">45</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;6.8 Doctor Clinical Dashboard
+            (doctor.dashboard.tsx)</span><span class="toc-pg">47</span></li>
+        <li class="toc-item"><span>&nbsp;&nbsp;&nbsp;&nbsp;6.9 Role-Based Login Screen (login.tsx)</span><span
+            class="toc-pg">49</span></li>
+        <li class="toc-item"><span><strong>7. Setup & Execution Commands</strong></span><span class="toc-pg">51</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- 1. SYSTEM OVERVIEW -->
+    <div class="page-break"></div>
+    <h1 class="section-title">1. System Overview & Architecture Flow</h1>
+    <p>
+      <strong>MedSimplify</strong> is a medical-grade, artificial intelligence-powered medical report simplification and
+      healthcare management platform. It transforms complex diagnostic reports (CBC, Dengue profiles, LFT, Lipid
+      profiles) into plain-language explanations with dual-tier summaries (Standard Medical + ELI5 Analogy) and
+      multi-lingual regional Indian translations (Hindi, Tamil, Telugu).
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Layer</th>
+          <th>Technology</th>
+          <th>Responsibility</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Frontend SPA</strong></td>
+          <td>React 19, TypeScript, TanStack Router, TailwindCSS</td>
+          <td>Mobile-frame responsive interface for patients and doctors.</td>
+        </tr>
+        <tr>
+          <td><strong>API Backend</strong></td>
+          <td>Python 3.10+, FastAPI, Uvicorn</td>
+          <td>Asynchronous REST API, CORS middleware, JWT security.</td>
+        </tr>
+        <tr>
+          <td><strong>AI/NLP Pipeline</strong></td>
+          <td>PyMuPDF, PyTesseract, OpenCV, Helsinki-NLP</td>
+          <td>Multi-modal OCR, entity extraction, simplification & translation.</td>
+        </tr>
+        <tr>
+          <td><strong>Database</strong></td>
+          <td>PostgreSQL (Supabase) + SQLite Fallback</td>
+          <td>Persistent relational storage with dynamic sequence realignment.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 2. CONFIGURATION & DEPENDENCIES -->
+    <div class="page-break"></div>
+    <h1 class="section-title">2. System Configuration & Dependencies</h1>
+
+    <h2 class="subsection-title">2.1 Python Backend Dependencies</h2>
+    <div class="file-badge">backend/requirements.txt</div>
+    <pre><code># Hugging Face & AI
+transformers>=4.35.0
+torch>=2.0.0
+accelerate>=0.24.0
+sentence-transformers>=2.2.2
+
+# OCR & PDF
+pytesseract>=0.3.10
+pymupdf>=1.23.8
+pillow>=10.0.0
+opencv-python-headless>=4.8.0
+
+# Backend & Database
+fastapi>=0.100.0
+uvicorn>=0.24.0
+python-multipart>=0.0.6
+pydantic>=2.0.0
+pydantic[email]>=2.0.0
+email-validator>=2.0.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Authentication
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Utilities
+python-dotenv>=1.0.0
+loguru>=0.7.0
+reportlab>=4.0.0
+requests>=2.31.0
+httpx>=0.25.0
+python-docx>=1.0.0
+google-generativeai>=0.8.0</code></pre>
+
+    <h2 class="subsection-title">2.2 Frontend Package Manifest</h2>
+    <div class="file-badge">frontend/package.json</div>
+    <pre><code>{
+  "name": "medsimplify-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@radix-ui/react-accordion": "^1.2.12",
+    "@radix-ui/react-avatar": "^1.1.11",
+    "@radix-ui/react-checkbox": "^1.3.3",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-progress": "^1.1.8",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@tanstack/react-query": "^5.101.1",
+    "@tanstack/react-router": "1.170.18",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.575.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwind-merge": "^3.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.4",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}</code></pre>
+
+    <h2 class="subsection-title">2.3 Docker Compose Multi-Container Orchestration</h2>
+    <div class="file-badge">docker-compose.yml</div>
+    <pre><code>version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://medsimplify_user:Bh01072007@db:5432/medsimplify
+      - SECRET_KEY=medsimplify_super_secret_production_key_2026
+    depends_on:
+      - db
+    restart: always
+
+  db:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: medsimplify_user
+      POSTGRES_PASSWORD: Bh01072007
+      POSTGRES_DB: medsimplify
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:</code></pre>
+
+    <!-- 3. DATABASE ENGINE & ORM DATA MODELS -->
+    <div class="page-break"></div>
+    <h1 class="section-title">3. Database Engine & ORM Data Models</h1>
+
+    <h2 class="subsection-title">3.1 Database Connection & Resync Engine</h2>
+    <div class="file-badge">backend/config/database.py</div>
+    <pre><code>from sqlalchemy import create_engine, text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sqlite_fallback_url = f"sqlite:///{os.path.join(backend_dir, 'medsimplify.db').replace('\\', '/')}"
+PRIMARY_DATABASE_URL = os.getenv("DATABASE_URL", sqlite_fallback_url)
+
+if PRIMARY_DATABASE_URL and PRIMARY_DATABASE_URL.startswith("postgres://"):
+    PRIMARY_DATABASE_URL = PRIMARY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+try:
+    engine = create_engine(PRIMARY_DATABASE_URL, pool_size=10, max_overflow=20, pool_pre_ping=True)
+    with engine.connect() as conn:
+        pass
+    DATABASE_URL = PRIMARY_DATABASE_URL
+except Exception:
+    DATABASE_URL = sqlite_fallback_url
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def sync_db_sequences(db):
+    """Aligns PostgreSQL primary key serial sequences with existing table max(id)."""
+    if "postgresql" in DATABASE_URL:
+        tables = [
+            "users", "patient_profiles", "doctor_profiles", "family_members",
+            "chats", "messages", "medical_reports", "medicine_reminders",
+            "medicine_logs", "appointments", "symptoms", "prescriptions", "medicines"
+        ]
+        for tbl in tables:
+            try:
+                db.execute(text(f"SELECT setval(pg_get_serial_sequence('{tbl}', 'id'), COALESCE((SELECT MAX(id) FROM {tbl}), 1));"))
+                db.commit()
+            except Exception:
+                db.rollback()</code></pre>
+
+    <h2 class="subsection-title">3.2 User Authentication & Identity Model</h2>
+    <div class="file-badge">backend/models/user.py</div>
+    <pre><code>from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy.orm import relationship
+from datetime import datetime, timezone
+from .base import Base
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    phone = Column(String, unique=True, index=True, nullable=True)
+    password_hash = Column(String, nullable=False)
+    user_type = Column(String, nullable=False)  # "patient" or "doctor"
+    is_active = Column(Boolean, default=True)
+    is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_login = Column(DateTime, nullable=True)
+    
+    patient_profile = relationship("PatientProfile", back_populates="user", uselist=False)
+    doctor_profile = relationship("DoctorProfile", back_populates="user", uselist=False)
+    medical_reports = relationship("MedicalReport", back_populates="user")
+    appointments = relationship("Appointment", foreign_keys="Appointment.user_id", back_populates="user")</code></pre>
+
+    <h2 class="subsection-title">3.3 Patient Profile Entity</h2>
+    <div class="file-badge">backend/models/patient_profile.py</div>
+    <pre><code>from sqlalchemy import Column, Integer, String, Date, Text, ForeignKey
+from sqlalchemy.orm import relationship
+from .base import Base
+
+class PatientProfile(Base):
+    __tablename__ = "patient_profiles"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    full_name = Column(String, nullable=False)
+    date_of_birth = Column(Date, nullable=True)
+    gender = Column(String, nullable=True)  # "Male", "Female", "Other"
+    blood_group = Column(String, nullable=True)  # "A+", "B+", "O+", etc.
+    address = Column(Text, nullable=True)
+    emergency_contact_name = Column(String, nullable=True)
+    emergency_contact_phone = Column(String, nullable=True)
+    emergency_contact_relationship = Column(String, nullable=True)
+    allergies = Column(Text, nullable=True)
+    chronic_conditions = Column(Text, nullable=True)
+    
+    user = relationship("User", back_populates="patient_profile")
+    medical_reports = relationship("MedicalReport", back_populates="patient")
+    symptoms = relationship("Symptom", back_populates="patient")</code></pre>
+
+    <h2 class="subsection-title">3.4 Diagnostic Medical Report Entity</h2>
+    <div class="file-badge">backend/models/medical_report.py</div>
+    <pre><code>from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON, Boolean
+from sqlalchemy.orm import relationship
+from datetime import datetime, timezone
+from .base import Base
+
+class MedicalReport(Base):
+    __tablename__ = "medical_reports"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("patient_profiles.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    report_type = Column(String, nullable=False)
+    file_url = Column(String, nullable=False)
+    file_name = Column(String, nullable=False)
+    raw_text = Column(Text, nullable=True)
+    extracted_data = Column(JSON, nullable=True)
+    simplified_summary = Column(JSON, nullable=True)
+    translated_summary = Column(Text, nullable=True)
+    language = Column(String, default="en")
+    vector_embeddings = Column(JSON, nullable=True)
+    is_flagged = Column(Boolean, default=False)
+    flagged_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    
+    user = relationship("User", back_populates="medical_reports")
+    patient = relationship("PatientProfile", back_populates="medical_reports")</code></pre>
+
+    <!-- 4. ARTIFICIAL INTELLIGENCE & CLINICAL NLP PIPELINE -->
+    <div class="page-break"></div>
+    <h1 class="section-title">4. Artificial Intelligence & Clinical NLP Pipeline</h1>
+
+    <h2 class="subsection-title">4.1 Multi-Modal OCR Text Extraction Service</h2>
+    <div class="file-badge">backend/services/ocr_service.py</div>
+    <pre><code>import io
+import pytesseract
+from PIL import Image
+import cv2
+import numpy as np
+
+class OCRService:
+    def __init__(self):
+        self.custom_config = r'--oem 3 --psm 6'
+
+    def preprocess_image(self, image_bytes: bytes):
+        """Enhances contrast and performs Otsu thresholding."""
+        try:
+            image = Image.open(io.BytesIO(image_bytes))
+            img_array = np.array(image)
+            if len(img_array.shape) == 3 and img_array.shape[2] == 4:
+                img_array = cv2.cvtColor(img_array, cv2.COLOR_RGBA2RGB)
+            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+            gray = cv2.convertScaleAbs(gray, alpha=1.5, beta=30)
+            gray = cv2.medianBlur(gray, 3)
+            _, gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            return gray
+        except Exception:
+            return None
+
+    def extract_text(self, image_bytes: bytes, is_pdf: bool = False, filename: str = "") -> str:
+        fname = filename.lower()
+        if is_pdf or fname.endswith('.pdf'):
+            import fitz
+            doc = fitz.open(stream=image_bytes, filetype="pdf")
+            return "\n".join([page.get_text() for page in doc if page.get_text()])
+        
+        preprocessed = self.preprocess_image(image_bytes)
+        if preprocessed is not None:
+            return pytesseract.image_to_string(preprocessed, config=self.custom_config)
+        image = Image.open(io.BytesIO(image_bytes))
+        return pytesseract.image_to_string(image, config=self.custom_config)</code></pre>
+
+    <h2 class="subsection-title">4.2 Plain-Language & ELI5 Text Simplification</h2>
+    <div class="file-badge">backend/services/text_simplifier.py</div>
+    <pre><code>class TextSimplifier:
+    def simplify_finding(self, test_name: str, value: str, flag: str) -> dict:
+        t = test_name.lower()
+        if "platelet" in t:
+            return {
+                "name": "Platelet Count",
+                "normal": "150,000 - 450,000 cells/mcL",
+                "status": flag,
+                "meaning": "Platelets are tiny cell fragments that help your blood clot to stop bleeding.",
+                "eli5": "🩹 Think of platelets as tiny construction workers carrying band-aids inside your blood pipes. When you get a cut, they rush over and patch the hole! When your count is low, your repair crew is understaffed."
+            }
+        elif "hemoglobin" in t or "hb" in t:
+            return {
+                "name": "Hemoglobin",
+                "normal": "13.0 - 17.0 g/dL",
+                "status": flag,
+                "meaning": "Hemoglobin carries fresh oxygen from your lungs to your body.",
+                "eli5": "🚚 Hemoglobin is like delivery trucks transporting oxygen around your body. Low levels mean fewer trucks running, causing fatigue."
+            }
+        return {
+            "name": test_name,
+            "status": flag,
+            "meaning": f"Your {test_name} measured at {value}.",
+            "eli5": "🔍 This test monitors your body's essential vital balances."
+        }</code></pre>
+
+    <!-- 5. BACKEND RESTFUL API ROUTERS -->
+    <div class="page-break"></div>
+    <h1 class="section-title">5. Backend RESTful API Routers</h1>
+
+    <h2 class="subsection-title">5.1 Main Server Application & Middleware</h2>
+    <div class="file-badge">backend/main.py</div>
+    <pre><code>from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from config.database import test_connection, engine, Base
+from api.ai_routes import router as ai_router
+from app.api.reports import router as reports_router
+from app.api.auth import router as auth_router
+from app.api.medicines import router as medicines_router
+from app.api.appointments import router as appointments_router
+from app.api.chat import router as chat_router
+
+app = FastAPI(title="MedSimplify API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.on_event("startup")
+async def startup_db():
+    test_connection()
+    Base.metadata.create_all(bind=engine)
+
+app.include_router(ai_router, prefix="/api/ai", tags=["AI Pipeline"])
+app.include_router(reports_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
+app.include_router(medicines_router, prefix="/api")
+app.include_router(appointments_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "MedSimplify API"}</code></pre>
+
+    <h2 class="subsection-title">5.2 Medical Report Upload & Parsing Controller</h2>
+    <div class="file-badge">backend/app/api/reports.py</div>
+    <pre><code>from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from sqlalchemy.orm import Session
+from app.db.database import get_db
+from app.models.models import MedicalReport, PatientProfile
+from services.ai_pipeline import ai_pipeline
+
+router = APIRouter(prefix="/reports", tags=["Medical Reports"])
+
+@router.post("/upload")
+async def upload_report(
+    patient_id: int = Form(1),
+    report_type: str = Form("lab_report"),
+    language: str = Form("en"),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        file_bytes = await file.read()
+        is_pdf = file.filename.lower().endswith(".pdf")
+        text = ai_pipeline.ocr_service.extract_text(file_bytes, is_pdf=is_pdf, filename=file.filename)
+        
+        output = ai_pipeline.process_report(text=text, language=language, filename=file.filename)
+        
+        report = MedicalReport(
+            patient_id=patient_id,
+            user_id=1,
+            report_type=report_type,
+            file_url=f"/reports/{file.filename}",
+            file_name=file.filename,
+            raw_text=text,
+            extracted_data=output.get("extracted_data"),
+            simplified_summary=output.get("simplified_summary"),
+            translated_summary=output.get("translated_summary"),
+            language=language,
+            is_flagged=output.get("is_flagged", False)
+        )
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+        return report
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))</code></pre>
+
+    <!-- 6. FRONTEND WEB ARCHITECTURE & UI ROUTES -->
+    <div class="page-break"></div>
+    <h1 class="section-title">6. Frontend Web Architecture & UI Routes</h1>
+
+    <h2 class="subsection-title">6.1 Centralized Asynchronous API Client</h2>
+    <div class="file-badge">frontend/src/lib/api-client.ts</div>
+    <pre><code>const API_BASE_URL = typeof window !== "undefined" && window.location.hostname 
+  ? `http://${window.location.hostname}:8000/api` 
+  : "http://localhost:8000/api";
+
+async function fetchApi&lt;T&gt;(endpoint: string, options: RequestInit = {}): Promise&lt;T&gt; {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const defaultHeaders: Record&lt;string, string&gt; = {};
+
+  if (!(options.body instanceof FormData)) {
+    defaultHeaders["Content-Type"] = "application/json";
+  }
+
+  const token = typeof localStorage !== "undefined" ? localStorage.getItem("medsimplify_token") : null;
+  if (token) {
+    defaultHeaders["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(url, { ...options, headers: { ...defaultHeaders, ...options.headers } });
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  return response.json();
+}
+
+export const uploadReportApi = (data: FormData) => fetchApi("/reports/upload", { method: "POST", body: data });
+export const getReportsApi = (id: number = 1) => fetchApi(`/reports/?patient_id=${id}`);
+export const askAiAssistantApi = (q: string, ids: number[] = []) => fetchApi("/chat/ai/ask", { method: "POST", body: JSON.stringify({ question: q, report_ids: ids }) });</code></pre>
+
+    <h2 class="subsection-title">6.2 Patient Home Dashboard Screen</h2>
+    <div class="file-badge">frontend/src/routes/home.tsx</div>
+    <pre><code>import { createFileRoute, Link } from "@tanstack/react-router";
+import { CalendarDays, FileText, Pill, Sparkles, Upload } from "lucide-react";
+import { BottomNav, PhoneFrame, Screen, SectionTitle } from "@/components/app-shell";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+
+export const Route = createFileRoute("/home")({
+  component: HomeScreen,
+});
+
+function HomeScreen() {
+  return (
+    &lt;PhoneFrame&gt;
+      &lt;Screen&gt;
+        &lt;div className="pb-3"&gt;
+          &lt;h1 className="text-2xl font-bold"&gt;Hello, Rajesh 👋&lt;/h1&gt;
+          &lt;p className="text-sm text-muted-foreground"&gt;Here is your daily health status&lt;/p&gt;
+        &lt;/div&gt;
+
+        &lt;Card className="mb-4 bg-primary/5 border-primary/20"&gt;
+          &lt;CardContent className="p-4"&gt;
+            &lt;div className="flex justify-between text-sm font-medium mb-1"&gt;
+              &lt;span&gt;Today's Medicine Adherence&lt;/span&gt;
+              &lt;span className="text-primary font-bold"&gt;75%&lt;/span&gt;
+            &lt;/div&gt;
+            &lt;Progress value={75} className="h-2" /&gt;
+          &lt;/CardContent&gt;
+        &lt;/Card&gt;
+
+        &lt;SectionTitle&gt;Quick Actions&lt;/SectionTitle&gt;
+        &lt;div className="grid grid-cols-2 gap-3 mb-6"&gt;
+          &lt;Link to="/upload" className="p-4 rounded-xl flex items-center gap-3 border bg-primary text-white"&gt;
+            &lt;Upload className="size-6" /&gt;
+            &lt;span className="font-semibold"&gt;Upload Report&lt;/span&gt;
+          &lt;/Link&gt;
+          &lt;Link to="/reports" className="p-4 rounded-xl flex items-center gap-3 border bg-card"&gt;
+            &lt;FileText className="size-6" /&gt;
+            &lt;span className="font-semibold"&gt;My Reports&lt;/span&gt;
+          &lt;/Link&gt;
+        &lt;/div&gt;
+
+        &lt;Link to="/assistant" className="block mb-6"&gt;
+          &lt;Card className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"&gt;
+            &lt;CardContent className="p-4 flex items-center gap-4"&gt;
+              &lt;Sparkles className="size-8 text-yellow-300" /&gt;
+              &lt;div&gt;
+                &lt;h3 className="font-bold text-base"&gt;Ask MedSimplify AI&lt;/h3&gt;
+                &lt;p className="text-xs text-blue-100"&gt;Instant plain-language answers grounded in your reports.&lt;/p&gt;
+              &lt;/div&gt;
+            &lt;/CardContent&gt;
+          &lt;/Card&gt;
+        &lt;/Link&gt;
+      &lt;/Screen&gt;
+      &lt;BottomNav active="home" /&gt;
+    &lt;/PhoneFrame&gt;
+  );
+}</code></pre>
+
+    <!-- 7. EXECUTION COMMANDS -->
+    <div class="page-break"></div>
+    <h1 class="section-title">7. Setup & Execution Commands</h1>
+
+    <h2 class="subsection-title">Backend Server Initialization (FastAPI)</h2>
+    <pre><code>cd backend
+py -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+py database_setup.py
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload</code></pre>
+
+    <h2 class="subsection-title">Frontend SPA Initialization (React 19 + Vite)</h2>
+    <pre><code>cd frontend
+npm install
+npm run dev</code></pre>
+
+    <p style="text-align: center; margin-top: 50px; color: var(--gray); font-size: 13px;">
+      — End of MedSimplify Source Code Documentation —
+    </p>
+
+  </div>
+
+</body>
+
+</html>

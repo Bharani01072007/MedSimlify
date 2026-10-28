@@ -1,3 +1,4 @@
+from .base import Base
 from .user import User
 from .patient_profile import PatientProfile
 from .doctor_profile import DoctorProfile
@@ -10,6 +11,7 @@ from .chat import Chat, Message
 from .family_member import FamilyMember
 
 __all__ = [
+    "Base",
     "User",
     "PatientProfile",
     "DoctorProfile",
