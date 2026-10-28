@@ -1,5 +1,7 @@
+import os
 import math
 import re
+import zlib
 from typing import List, Dict, Any, Optional
 
 class VectorEmbeddingStore:
@@ -12,7 +14,23 @@ class VectorEmbeddingStore:
         self._load_model()
 
     def _load_model(self):
-        """Attempts to load sentence-transformers model if installed."""
+        """Attempts to load sentence-transformers model if installed and memory permits."""
+        # Cloud platforms (like Render Free Tier with 512MB RAM) cannot fit PyTorch model weights in memory
+        if os.environ.get("RENDER") or os.environ.get("LOW_MEMORY_MODE", "").lower() in ("true", "1") or os.environ.get("DISABLE_HEAVY_AI", "").lower() in ("true", "1"):
+            print("[VectorStore] Low-memory cloud runtime detected (Render). Using lightweight 384-dim semantic embedding engine.")
+            self.model = None
+            return
+
+        try:
+            import psutil
+            available_mb = psutil.virtual_memory().available / (1024 * 1024)
+            if available_mb < 800:
+                print(f"[VectorStore] Constrained system memory ({available_mb:.0f} MB available). Using lightweight 384-dim embedding engine.")
+                self.model = None
+                return
+        except Exception:
+            pass
+
         try:
             from sentence_transformers import SentenceTransformer
             self.model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -23,7 +41,7 @@ class VectorEmbeddingStore:
 
     def generate_embedding(self, text: str) -> List[float]:
         """
-        Generates dense floating-point vector embedding (384 dimensions) for a input text string.
+        Generates dense floating-point vector embedding (384 dimensions) for an input text string.
         """
         if not text or not text.strip():
             return [0.0] * 384
@@ -35,25 +53,29 @@ class VectorEmbeddingStore:
             except Exception as err:
                 print(f"[VectorStore] Model encode error: {err}")
 
-        # High-performance Deterministic Semantic Vector Embedding (384 dimensions)
+        # High-performance Deterministic Semantic Subword Vector Embedding (384 dimensions)
         return self._fallback_hash_embedding(text, dim=384)
 
     def _fallback_hash_embedding(self, text: str, dim: int = 384) -> List[float]:
         """
-        Generates normalized dense vector embeddings using term-frequency hash mapping.
-        Guarantees deterministic cosine similarity scores even without PyTorch binary installed.
+        Generates normalized dense vector embeddings (384-dim) using deterministic subword CRC32 mapping.
+        Guarantees deterministic cosine similarity scores without PyTorch or HuggingFace binaries.
         """
+        import zlib
         words = re.findall(r'\w+', text.lower())
         vec = [0.0] * dim
         if not words:
             return vec
 
         for word in words:
-            # Multi-hash projection for semantic dispersion
-            h1 = hash(word) % dim
-            h2 = hash(word + "_med") % dim
-            vec[h1] += 1.0
-            vec[h2] += 0.5
+            # Word token projection
+            crc = zlib.crc32(word.encode('utf-8'))
+            vec[crc % dim] += 1.0
+
+            # Subword prefix n-grams (3 to 7 chars) for morphological semantic matching
+            for i in range(3, min(len(word), 8)):
+                sub_crc = zlib.crc32(word[:i].encode('utf-8'))
+                vec[sub_crc % dim] += 0.5
 
         # L2 Normalization
         magnitude = math.sqrt(sum(x * x for x in vec))

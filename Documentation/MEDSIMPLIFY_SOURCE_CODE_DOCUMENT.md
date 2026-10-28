@@ -197,11 +197,8 @@ Medsimplify/
 
 ### 2.1 Backend Dependencies (`backend/requirements.txt`)
 ```text
-# Hugging Face & AI
-transformers>=4.35.0
-torch>=2.0.0
-accelerate>=0.24.0
-sentence-transformers>=2.2.2
+# Cloud Production Requirements (Optimized for 512MB RAM Instances)
+# Primary AI reasoning is powered by Google Gemini API & lightweight 384-dim dense embeddings.
 
 # OCR & PDF
 pytesseract>=0.3.10
@@ -224,7 +221,7 @@ psycopg2-binary>=2.9.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 
-# Utilities
+# Utilities & AI
 python-dotenv>=1.0.0
 loguru>=0.7.0
 reportlab>=4.0.0
@@ -232,6 +229,9 @@ requests>=2.31.0
 httpx>=0.25.0
 python-docx>=1.0.0
 google-generativeai>=0.8.0
+
+# Optional Local Deep Learning (GPU Environments - requirements-ml.txt):
+# transformers>=4.35.0, torch>=2.0.0, accelerate>=0.24.0, sentence-transformers>=2.2.2
 ```
 
 ### 2.2 Frontend Package Manifest (`frontend/package.json`)

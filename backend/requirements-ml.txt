@@ -1,0 +1,8 @@
+# Optional Heavy ML / PyTorch Dependencies for Local GPU Workstations
+# MedSimplify utilizes Google Gemini LLM API (google-generativeai) & lightweight 384-dim 
+# dense vector embeddings for cloud production hosting.
+# For local offline HuggingFace model fine-tuning:
+transformers>=4.35.0
+torch>=2.0.0
+accelerate>=0.24.0
+sentence-transformers>=2.2.2

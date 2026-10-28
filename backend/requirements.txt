@@ -1,8 +1,7 @@
-# Hugging Face & AI
-transformers>=4.35.0
-torch>=2.0.0
-accelerate>=0.24.0
-sentence-transformers>=2.2.2
+# Cloud Production Requirements (Optimized for Render Free Tier 512MB RAM)
+# Primary AI reasoning is driven by Google Gemini LLM API (google-generativeai)
+# and lightweight 384-dimensional dense semantic embeddings.
+# For optional heavy PyTorch / local GPU models, see requirements-ml.txt.
 
 # OCR & PDF
 pytesseract>=0.3.10
@@ -25,7 +24,7 @@ psycopg2-binary>=2.9.0
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
 
-# Utilities
+# Utilities & AI
 python-dotenv>=1.0.0
 loguru>=0.7.0
 reportlab>=4.0.0
