@@ -114,6 +114,7 @@ function LoginScreen() {
                   <Input
                     id="email"
                     type="text"
+                    autoComplete="username"
                     value={email}
                     onChange={(e: any) => setEmail(e.target.value)}
                     className="h-12 pl-9 text-[15px]"
@@ -129,6 +130,7 @@ function LoginScreen() {
                   <Input
                     id="password"
                     type={show ? "text" : "password"}
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e: any) => setPassword(e.target.value)}
                     className="h-12 pl-9 pr-11 text-[15px]"

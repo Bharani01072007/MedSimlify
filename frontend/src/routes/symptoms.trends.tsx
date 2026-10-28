@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { PageHeader, PhoneFrame, Screen, SectionTitle } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { getSymptomTrendsApi } from "@/lib/api-client";
+import { getSymptomTrendsApi, API_BASE_URL } from "@/lib/api-client";
 import { feverTrend as seedTrend, warningSigns } from "@/lib/medsimplify-data";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +67,7 @@ function TrendsScreen() {
     setSharing(true);
     try {
       // Post a chat message with trend summary
-      await fetch(`http://localhost:8000/api/chat/messages?message=${encodeURIComponent("📊 I've shared my symptom trends with you — please review.")}&sender=patient&sender_name=Rajesh%20Kumar&chat_id=1`, {
+      await fetch(`${API_BASE_URL}/chat/messages?message=${encodeURIComponent("📊 I've shared my symptom trends with you — please review.")}&sender=patient&sender_name=Rajesh%20Kumar&chat_id=1`, {
         method: "POST",
       });
       toast.success("Symptom trends shared with Dr. Priya Sharma via chat ✅");

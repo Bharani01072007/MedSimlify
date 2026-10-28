@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { startVideoCallApi } from "@/lib/api-client";
+import { startVideoCallApi, API_BASE_URL } from "@/lib/api-client";
 import {
   AlertTriangle,
   BarChart3,
@@ -98,7 +98,7 @@ function DoctorDashboard() {
 
     try {
       if (mode === "soap") {
-        const res = await fetch("http://localhost:8000/api/ai/soap", {
+        const res = await fetch(`${API_BASE_URL}/ai/soap`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -115,7 +115,7 @@ function DoctorDashboard() {
           `• Plan:\n${data.soap_notes?.plan || ""}`;
         setAiResponse(soapText);
       } else {
-        const res = await fetch("http://localhost:8000/api/ai/chat", {
+        const res = await fetch(`${API_BASE_URL}/ai/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -140,7 +140,7 @@ function DoctorDashboard() {
 
   async function handleSendEducation(title: string) {
     try {
-      const res = await fetch("http://localhost:8000/api/chat/messages", {
+      const res = await fetch(`${API_BASE_URL}/chat/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

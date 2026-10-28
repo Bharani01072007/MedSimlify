@@ -1,11 +1,25 @@
 const getApiBaseUrl = () => {
-  if (typeof window !== "undefined" && window.location.hostname) {
-    return `http://${window.location.hostname}:8000/api`;
+  // 1. Support explicit environment variable
+  const envApiUrl = import.meta.env.VITE_API_URL as string | undefined;
+  if (envApiUrl && envApiUrl.trim()) {
+    const cleaned = envApiUrl.trim().replace(/\/+$/, "");
+    return cleaned.endsWith("/api") ? cleaned : `${cleaned}/api`;
   }
-  return "http://localhost:8000/api";
+
+  // 2. Browser runtime environment check
+  if (typeof window !== "undefined") {
+    // Local development connects to localhost:8000
+    if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+      return `http://${window.location.hostname}:8000/api`;
+    }
+    // Production deployments (Vercel, custom domain) connect over HTTPS to Render backend
+    return "https://medsimlify-backend.onrender.com/api";
+  }
+
+  return "https://medsimlify-backend.onrender.com/api";
 };
 
-const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
 
 export interface ApiResponse<T = any> {
   data?: T;

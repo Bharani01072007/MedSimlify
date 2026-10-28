@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { fullReportRows, importantFindings, patient, warningSigns, whatToDo } from "@/lib/medsimplify-data";
 import { cn } from "@/lib/utils";
+import { API_BASE_URL } from "@/lib/api-client";
 
 export const Route = createFileRoute("/results")({
   head: () => ({
@@ -835,7 +836,7 @@ function ResultsScreen() {
     ];
 
     setIsTranslating(true);
-    fetch("http://localhost:8000/api/ai/translate_report", {
+    fetch(`${API_BASE_URL}/ai/translate_report`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
