@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { fullReportRows, importantFindings, patient, warningSigns, whatToDo } from "@/lib/medsimplify-data";
 import { cn } from "@/lib/utils";
-import { API_BASE_URL } from "@/lib/api-client";
+import { API_BASE_URL, getReportsApi } from "@/lib/api-client";
 
 export const Route = createFileRoute("/results")({
   head: () => ({
@@ -767,21 +767,21 @@ const MULTILINGUAL_CATALOG: Record<string, Record<string, { title: string; eli5:
 function detectConditionKey(title: string, rawText: string, entities: any[]): string {
   const tLower = (title || "").toLowerCase();
   
-  if (tLower.includes("ige") || tLower.includes("allergy") || tLower.includes("rast")) return "ige";
-  if (tLower.includes("dengue")) return "dengue";
+  if (tLower.includes("dengue") || tLower.includes("ns1") || tLower.includes("platelet")) return "dengue";
   if (tLower.includes("metabolic") || tLower.includes("glucose") || tLower.includes("diabetes") || tLower.includes("hba1c")) return "diabetes";
-  if (tLower.includes("anemia") || tLower.includes("hemoglobin") || tLower.includes("iron")) return "anemia";
-  if (tLower.includes("lipid") || tLower.includes("cholesterol")) return "lipid";
-  if (tLower.includes("lft") || tLower.includes("liver")) return "lft";
+  if (tLower.includes("anemia") || tLower.includes("anaemia") || tLower.includes("hemoglobin") || tLower.includes("iron")) return "anemia";
+  if (tLower.includes("lipid") || tLower.includes("cholesterol") || tLower.includes("triglyceride")) return "lipid";
+  if (tLower.includes("lft") || tLower.includes("liver") || tLower.includes("bilirubin")) return "lft";
+  if (/\b(ige|allergy|allergen|rast|immunoglobulin)\b/i.test(tLower)) return "ige";
 
   const combined = (title + " " + rawText + " " + JSON.stringify(entities || [])).toLowerCase();
   
-  if (combined.includes("ige") || combined.includes("allergy") || combined.includes("rast") || combined.includes("immunoglobulin")) return "ige";
-  if (combined.includes("dengue") || combined.includes("ns1") || (combined.includes("platelet") && (combined.includes("positive") || combined.includes("critical")))) return "dengue";
+  if (combined.includes("dengue") || combined.includes("ns1") || combined.includes("platelet")) return "dengue";
   if (combined.includes("hba1c") || combined.includes("glucose") || combined.includes("diabetes") || combined.includes("fasting blood sugar") || combined.includes("ppbs") || combined.includes("metabolic")) return "diabetes";
-  if (combined.includes("hemoglobin") || combined.includes("hgb") || combined.includes("anemia") || combined.includes("ferritin")) return "anemia";
+  if (combined.includes("hemoglobin") || combined.includes("hgb") || combined.includes("anemia") || combined.includes("anaemia") || combined.includes("ferritin")) return "anemia";
   if (combined.includes("cholesterol") || combined.includes("lipid") || combined.includes("triglyceride") || combined.includes("hdl") || combined.includes("ldl")) return "lipid";
   if (combined.includes("lft") || combined.includes("sgpt") || combined.includes("sgot") || combined.includes("bilirubin") || combined.includes("liver")) return "lft";
+  if (/\b(ige|allergy|allergen|rast|immunoglobulin)\b/i.test(combined)) return "ige";
 
   return "general";
 }
@@ -815,11 +815,144 @@ function ResultsScreen() {
       const stored = sessionStorage.getItem("latest_analysis_result");
       if (stored) {
         setLiveData(JSON.parse(stored));
+      } else {
+        // If not in session, load the latest report from DB
+        getReportsApi(1)
+          .then((reps) => {
+            if (Array.isArray(reps) && reps.length > 0) {
+              setLiveData(reps[0]);
+              try {
+                sessionStorage.setItem("latest_analysis_result", JSON.stringify(reps[0]));
+              } catch {
+                // ignore
+              }
+            }
+          })
+          .catch(() => {});
       }
     } catch {
       // ignore
     }
   }, []);
+
+  // Preload speech synthesis voices on component mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  }, []);
+
+  const rawText = liveData?.raw_text || "";
+
+  const extractedPatientName =
+    liveData?.simplified_summary?.patient_name ||
+    liveData?.extracted_data?.patient_name ||
+    (typeof liveData?.simplified_summary?.patient_info === "string" ? liveData.simplified_summary.patient_info.split("|")[0]?.trim() : liveData?.simplified_summary?.patient_info?.name) ||
+    (rawText.match(/(?:Patient\s*Name|Patient|Name):\s*([^|\n]+)/i)?.[1]?.trim()) ||
+    patient.name;
+
+  const extractedAge =
+    liveData?.simplified_summary?.age ||
+    liveData?.extracted_data?.age ||
+    liveData?.simplified_summary?.patient_info?.age ||
+    (rawText.match(/(?:Age|Yrs|Years):\s*([^|\n]+)/i)?.[1]?.trim()) ||
+    patient.age;
+
+  const extractedGender =
+    liveData?.simplified_summary?.gender ||
+    liveData?.extracted_data?.gender ||
+    liveData?.simplified_summary?.patient_info?.gender ||
+    (rawText.match(/\b(Male|Female|Other|M|F)\b/i)?.[1]?.trim()) ||
+    "";
+
+  const entitiesList =
+    liveData?.extracted_data?.entities ||
+    liveData?.simplified_summary?.extracted_entities ||
+    liveData?.findings ||
+    null;
+
+  const findings = entitiesList && Array.isArray(entitiesList) && entitiesList.length > 0
+    ? entitiesList.map((f: any) => {
+        const param = f.entity || f.parameter || f.title || "Parameter";
+        const val = f.value || "";
+        const ref = f.reference || f.range || "Standard";
+        const statusStr = (f.status || f.flag || "").toString().toUpperCase();
+        const isDanger = statusStr.includes("HIGH") || statusStr.includes("CRITICAL") || statusStr.includes("ELEVATED") || statusStr.includes("VERY HIGH");
+        const isWarning = statusStr.includes("LOW");
+
+        return {
+          title: val ? `${param}: ${val}` : param,
+          tone: isDanger ? "danger" : isWarning ? "warning" : "good",
+          lines: [
+            `Reference Range: ${ref}`,
+            `Status / Flag: ${f.status || f.flag || "Normal"}`,
+          ],
+        };
+      })
+    : importantFindings;
+
+  // Detect report condition to pull matching native translations from MULTILINGUAL_CATALOG
+  const detectedConditionKey = (() => {
+    // 1. Analyze report text and entities
+    const reportText = (
+      (liveData?.file_name || "") + " " +
+      (liveData?.report_title || "") + " " +
+      (liveData?.simplified_summary?.title || "") + " " +
+      (liveData?.extracted_data?.test_name || "") + " " +
+      rawText + " " +
+      JSON.stringify(entitiesList || [])
+    ).toLowerCase();
+
+    // Specific condition signatures
+    if (reportText.includes("dengue") || reportText.includes("ns1") || reportText.includes("platelet")) return "dengue";
+    if (reportText.includes("diabetes") || reportText.includes("glucose") || reportText.includes("hba1c") || reportText.includes("sugar") || reportText.includes("metabolic")) return "diabetes";
+    if (reportText.includes("anemia") || reportText.includes("anaemia") || reportText.includes("hemoglobin") || reportText.includes("ferritin") || reportText.includes("iron")) return "anemia";
+    if (reportText.includes("lipid") || reportText.includes("cholesterol") || reportText.includes("triglyceride") || reportText.includes("hdl") || reportText.includes("ldl")) return "lipid";
+    if (reportText.includes("liver") || reportText.includes("sgpt") || reportText.includes("sgot") || reportText.includes("bilirubin") || reportText.includes("lft")) return "lft";
+    if (/\b(ige|allergy|allergen|rast|immunoglobulin)\b/i.test(reportText)) return "ige";
+
+    // 2. If backend explicitly provided condition_key
+    const summaryKey = liveData?.simplified_summary?.condition_key;
+    if (summaryKey && MULTILINGUAL_CATALOG[summaryKey] && summaryKey !== "general") return summaryKey;
+
+    // Use fallback demo list only if no live report text is available
+    const textToAnalyze = (JSON.stringify(findings || []) + " " + JSON.stringify(importantFindings || [])).toLowerCase();
+    if (textToAnalyze.includes("dengue") || textToAnalyze.includes("ns1") || textToAnalyze.includes("platelet")) return "dengue";
+    if (textToAnalyze.includes("diabetes") || textToAnalyze.includes("glucose") || textToAnalyze.includes("hba1c") || textToAnalyze.includes("sugar")) return "diabetes";
+    if (textToAnalyze.includes("anemia") || textToAnalyze.includes("anaemia") || textToAnalyze.includes("hemoglobin") || textToAnalyze.includes("ferritin") || textToAnalyze.includes("iron")) return "anemia";
+    if (textToAnalyze.includes("lipid") || textToAnalyze.includes("cholesterol") || textToAnalyze.includes("triglyceride") || textToAnalyze.includes("hdl") || textToAnalyze.includes("ldl")) return "lipid";
+    if (textToAnalyze.includes("liver") || textToAnalyze.includes("sgpt") || textToAnalyze.includes("sgot") || textToAnalyze.includes("bilirubin") || textToAnalyze.includes("lft")) return "lft";
+    if (/\b(ige|allergy|allergen|rast|immunoglobulin)\b/i.test(textToAnalyze)) return "ige";
+
+    return "general";
+  })();
+
+  const catalogItem = MULTILINGUAL_CATALOG[detectedConditionKey]?.[selectedLanguage] || MULTILINGUAL_CATALOG["general"]?.[selectedLanguage];
+  const catalogItemEn = MULTILINGUAL_CATALOG[detectedConditionKey]?.en || MULTILINGUAL_CATALOG["general"].en;
+
+  // Base fallback values strictly aligned to the detected condition
+  const baseTitle =
+    liveData?.simplified_summary?.title ||
+    liveData?.extracted_data?.test_name ||
+    liveData?.report_title ||
+    (liveData?.file_name ? `Summary: ${liveData.file_name}` : catalogItemEn.title);
+
+  const baseEli5 =
+    liveData?.simplified_summary?.eli5_summary ||
+    catalogItemEn.eli5;
+
+  const baseRecs =
+    (liveData?.simplified_summary?.recommendations && liveData.simplified_summary.recommendations.length > 0)
+      ? liveData.simplified_summary.recommendations
+      : catalogItemEn.actions;
+
+  const baseWarns =
+    (liveData?.simplified_summary?.warning_signs && liveData.simplified_summary.warning_signs.length > 0)
+      ? liveData.simplified_summary.warning_signs
+      : catalogItemEn.warnings;
 
   // Dynamic AI Model Pipeline Translation Effect
   useEffect(() => {
@@ -827,27 +960,6 @@ function ResultsScreen() {
 
     const multiDict = liveData?.simplified_summary?.multilingual || {};
     if (multiDict[selectedLanguage] || translatedCache[selectedLanguage]) return;
-
-    const baseTitle =
-      liveData?.simplified_summary?.title ||
-      liveData?.extracted_data?.test_name ||
-      liveData?.report_title ||
-      (liveData?.file_name ? `Summary: ${liveData.file_name}` : "Your Medical Report Summary");
-
-    const baseEli5 =
-      liveData?.simplified_summary?.eli5_summary ||
-      "Think of your body like a car getting a routine health tune-up check. All metrics are evaluated against standard reference ranges.";
-
-    const baseRecs = liveData?.simplified_summary?.recommendations || [
-      "Consult your primary physician for a comprehensive report review.",
-      "Follow up on any flagged parameters outside reference ranges."
-    ];
-
-    const baseWarns = liveData?.simplified_summary?.warning_signs || [
-      "High persistent fever (above 102°F / 39°C) unresponsive to fever medication",
-      "Sudden severe chest pain or difficulty breathing",
-      "Severe dizziness, confusion, or fainting"
-    ];
 
     setIsTranslating(true);
     fetch(`${API_BASE_URL}/ai/translate_report`, {
@@ -881,77 +993,7 @@ function ResultsScreen() {
       .finally(() => {
         setIsTranslating(false);
       });
-  }, [selectedLanguage, liveData, translatedCache]);
-
-  const rawText = liveData?.raw_text || "";
-
-  const extractedPatientName =
-    liveData?.simplified_summary?.patient_name ||
-    liveData?.extracted_data?.patient_name ||
-    (typeof liveData?.simplified_summary?.patient_info === "string" ? liveData.simplified_summary.patient_info.split("|")[0]?.trim() : liveData?.simplified_summary?.patient_info?.name) ||
-    (rawText.match(/(?:Patient\s*Name|Patient|Name):\s*([^|\n]+)/i)?.[1]?.trim()) ||
-    patient.name;
-
-  const extractedAge =
-    liveData?.simplified_summary?.age ||
-    liveData?.extracted_data?.age ||
-    liveData?.simplified_summary?.patient_info?.age ||
-    (rawText.match(/(?:Age|Yrs|Years):\s*([^|\n]+)/i)?.[1]?.trim()) ||
-    patient.age;
-
-  const extractedGender =
-    liveData?.simplified_summary?.gender ||
-    liveData?.extracted_data?.gender ||
-    liveData?.simplified_summary?.patient_info?.gender ||
-    (rawText.match(/\b(Male|Female|Other|M|F)\b/i)?.[1]?.trim()) ||
-    "";
-
-  const entitiesList =
-    liveData?.extracted_data?.entities ||
-    liveData?.simplified_summary?.extracted_entities ||
-    liveData?.findings ||
-    null;
-
-  const baseTitle =
-    liveData?.simplified_summary?.title ||
-    liveData?.extracted_data?.test_name ||
-    liveData?.report_title ||
-    (liveData?.file_name ? `Summary: ${liveData.file_name}` : "Your Medical Report Summary");
-
-  const baseEli5 =
-    liveData?.simplified_summary?.eli5_summary ||
-    "Think of your body like a car getting a routine health tune-up check. All metrics are evaluated against standard reference ranges.";
-
-  const baseRecs = liveData?.simplified_summary?.recommendations || [
-    "Consult your primary physician for a comprehensive report review.",
-    "Follow up on any flagged parameters outside reference ranges."
-  ];
-
-  const baseWarns = liveData?.simplified_summary?.warning_signs || [
-    "High persistent fever (above 102°F / 39°C) unresponsive to fever medication",
-    "Sudden severe chest pain or difficulty breathing",
-    "Severe dizziness, confusion, or fainting"
-  ];
-
-  // Detect report condition to pull matching native translations from MULTILINGUAL_CATALOG
-  const detectedConditionKey = (() => {
-    const raw = (
-      rawText + " " +
-      (liveData?.file_name || "") + " " +
-      baseTitle + " " +
-      JSON.stringify(entitiesList || []) + " " +
-      JSON.stringify(importantFindings || [])
-    ).toLowerCase();
-    if (raw.includes("dengue") || raw.includes("platelet") || raw.includes("ns1") || raw.includes("80,000") || raw.includes("80000")) return "dengue";
-    if (raw.includes("diabetes") || raw.includes("glucose") || raw.includes("hba1c") || raw.includes("sugar")) return "diabetes";
-    if (raw.includes("anemia") || raw.includes("hemoglobin") || raw.includes("ferritin") || raw.includes("rbc")) return "anemia";
-    if (raw.includes("lipid") || raw.includes("cholesterol") || raw.includes("triglyceride") || raw.includes("hdl") || raw.includes("ldl")) return "lipid";
-    if (raw.includes("liver") || raw.includes("sgpt") || raw.includes("sgot") || raw.includes("bilirubin") || raw.includes("lft")) return "lft";
-    if (raw.includes("ige") || raw.includes("allergy") || raw.includes("rast")) return "ige";
-    return "general";
-  })();
-
-  const catalogItem = MULTILINGUAL_CATALOG[detectedConditionKey]?.[selectedLanguage] || MULTILINGUAL_CATALOG["general"]?.[selectedLanguage];
+  }, [selectedLanguage, liveData, translatedCache, baseTitle, baseEli5, baseRecs, baseWarns]);
 
   // Resolve backend response multilingual dictionary or live AI model translated cache
   const multiDict = liveData?.simplified_summary?.multilingual || {};
@@ -963,6 +1005,10 @@ function ResultsScreen() {
     if (!str) return true;
     const trimmed = str.trim();
     if (trimmed.startsWith("[TA]") || trimmed.startsWith("[HI]") || trimmed.startsWith("[TE]") || trimmed.startsWith("[ES]") || /^\[[A-Z]{2,3}\]:/.test(trimmed)) {
+      return true;
+    }
+    // Reject generic car metaphor if the condition is specific
+    if (detectedConditionKey !== "general" && (trimmed.includes("sports car") || trimmed.includes("tune-up") || trimmed.includes("காரின்") || trimmed.includes("ஸ்போர்ட்ஸ்") || trimmed.includes("स्पोर्ट्स") || trimmed.includes("స్పోర్ట్స్"))) {
       return true;
     }
     // If Tamil is selected, text must contain Tamil Unicode characters
@@ -981,30 +1027,21 @@ function ResultsScreen() {
       : (catalogItem || {});
 
   // Resolve title, ELI5 explanation, actions, and warnings dynamically from native translation
-  const reportTitle = selectedLanguage === "en" ? baseTitle : (activeLangData.title || catalogItem?.title || baseTitle);
-  const eli5Text = selectedLanguage === "en" ? baseEli5 : (activeLangData.eli5_summary || activeLangData.eli5 || catalogItem?.eli5 || baseEli5);
-  const actions = selectedLanguage === "en" ? baseRecs : (activeLangData.recommendations || activeLangData.actions || catalogItem?.actions || baseRecs);
-  const warnings = selectedLanguage === "en" ? baseWarns : (activeLangData.warning_signs || activeLangData.warnings || catalogItem?.warnings || baseWarns);
+  const reportTitle = selectedLanguage === "en"
+    ? (catalogItemEn.title || liveData?.simplified_summary?.title)
+    : (catalogItem?.title || activeLangData?.title || baseTitle);
 
-  const findings = entitiesList && Array.isArray(entitiesList) && entitiesList.length > 0
-    ? entitiesList.map((f: any) => {
-        const param = f.entity || f.parameter || f.title || "Parameter";
-        const val = f.value || "";
-        const ref = f.reference || f.range || "Standard";
-        const statusStr = (f.status || f.flag || "").toString().toUpperCase();
-        const isDanger = statusStr.includes("HIGH") || statusStr.includes("CRITICAL") || statusStr.includes("ELEVATED") || statusStr.includes("VERY HIGH");
-        const isWarning = statusStr.includes("LOW");
+  const eli5Text = selectedLanguage === "en"
+    ? (catalogItemEn.eli5 || liveData?.simplified_summary?.eli5_summary)
+    : (catalogItem?.eli5 || activeLangData?.eli5_summary || activeLangData?.eli5 || baseEli5);
 
-        return {
-          title: val ? `${param}: ${val}` : param,
-          tone: isDanger ? "danger" : isWarning ? "warning" : "good",
-          lines: [
-            `Reference Range: ${ref}`,
-            `Status / Flag: ${f.status || f.flag || "Normal"}`,
-          ],
-        };
-      })
-    : importantFindings;
+  const actions = selectedLanguage === "en"
+    ? (catalogItemEn.actions || liveData?.simplified_summary?.recommendations)
+    : (catalogItem?.actions || activeLangData?.recommendations || activeLangData?.actions || baseRecs);
+
+  const warnings = selectedLanguage === "en"
+    ? (catalogItemEn.warnings || liveData?.simplified_summary?.warning_signs)
+    : (catalogItem?.warnings || activeLangData?.warning_signs || activeLangData?.warnings || baseWarns);
 
   const tableRows = entitiesList && Array.isArray(entitiesList) && entitiesList.length > 0
     ? entitiesList.map((e: any) => ({
@@ -1020,6 +1057,7 @@ function ResultsScreen() {
     if (speaking) {
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
+        currentAudioRef.current.currentTime = 0;
         currentAudioRef.current = null;
       }
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -1032,56 +1070,134 @@ function ResultsScreen() {
 
     const activeLangObj = LANGUAGES.find((l) => l.code === selectedLanguage) || LANGUAGES[0];
     const targetLangTag = activeLangObj.langTag;
+    const ttsLang = selectedLanguage === "tanglish" ? "ta" : (selectedLanguage || "en");
 
     // Build plain text without emojis or markdown brackets
     let speechText = "";
     if (eli5Mode) {
       speechText = `${reportTitle}. ${eli5Text}`;
     } else {
-      const findingsText = findings.map((f: any) => `${f.title}. ${f.lines.join(". ")}`).join(". ");
-      const actionsText = actions.join(". ");
-      speechText = `${reportTitle}. Findings: ${findingsText}. What to do: ${actionsText}`;
+      const actionsText = Array.isArray(actions) ? actions.join(". ") : "";
+      speechText = `${reportTitle}. ${actionsText}`;
     }
 
-    // Strip symbols and emojis, keep alphanumeric and regional script characters
+    // Strip symbols and emojis, keep alphanumeric and regional script characters (including Spanish accents)
     const cleanSpeech = speechText
-      .replace(/[^\w\s\.,;:!\?\-\'\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F]/g, " ")
+      .replace(/[#*`_~\[\]\(\)\{\}]/g, " ")
+      .replace(/[^\w\s\.,;:!\?\-\'\u00C0-\u024F\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
 
+    if (!cleanSpeech) {
+      toast.error("No text available to speak.");
+      return;
+    }
+
+    // Split speech into short natural sentence chunks (max 150 characters per chunk)
+    const rawSentences = cleanSpeech.split(/(?<=[.?!;।\n])\s+/);
+    const chunks: string[] = [];
+    let currentChunk = "";
+    for (const s of rawSentences) {
+      if (!s.trim()) continue;
+      if ((currentChunk + " " + s).trim().length <= 150) {
+        currentChunk = (currentChunk + " " + s).trim();
+      } else {
+        if (currentChunk) chunks.push(currentChunk);
+        if (s.length > 150) {
+          const parts = s.split(/(?<=[,])\s+/);
+          let sub = "";
+          for (const p of parts) {
+            if ((sub + " " + p).trim().length <= 150) {
+              sub = (sub + " " + p).trim();
+            } else {
+              if (sub) chunks.push(sub);
+              sub = p.trim();
+            }
+          }
+          if (sub) chunks.push(sub);
+          currentChunk = "";
+        } else {
+          currentChunk = s;
+        }
+      }
+    }
+    if (currentChunk) chunks.push(currentChunk);
+    if (chunks.length === 0) chunks.push(cleanSpeech.slice(0, 150));
+
     setSpeaking(true);
 
-    // 2. High-Fidelity Audio Streaming via Backend Native TTS Service
-    try {
-      const ttsUrl = `${API_BASE_URL}/ai/tts?text=${encodeURIComponent(cleanSpeech)}&lang=${selectedLanguage}`;
-      const audio = new Audio(ttsUrl);
+    // High-Fidelity Multi-Chunk Audio Streaming Player
+    let chunkIndex = 0;
+
+    const playNextChunk = () => {
+      // Check if finished all chunks
+      if (chunkIndex >= chunks.length) {
+        setSpeaking(false);
+        currentAudioRef.current = null;
+        return;
+      }
+
+      const chunk = chunks[chunkIndex++];
+      const directUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${ttsLang}&client=tw-ob&q=${encodeURIComponent(chunk)}`;
+      const backendUrl = `${API_BASE_URL}/ai/tts?text=${encodeURIComponent(chunk)}&lang=${selectedLanguage}`;
+
+      const audio = new Audio();
+      audio.src = directUrl;
       currentAudioRef.current = audio;
 
       audio.onended = () => {
-        setSpeaking(false);
-        currentAudioRef.current = null;
+        playNextChunk();
       };
 
       audio.onerror = () => {
-        // Fallback to browser SpeechSynthesis if network audio stream fails
-        fallbackSpeechSynthesis(cleanSpeech, targetLangTag);
+        // Direct stream failed, try backend endpoint
+        const backendAudio = new Audio();
+        backendAudio.src = backendUrl;
+        currentAudioRef.current = backendAudio;
+
+        backendAudio.onended = () => {
+          playNextChunk();
+        };
+
+        backendAudio.onerror = () => {
+          // If network audio fails, try Web Speech API
+          fallbackSpeechSynthesis(chunk, targetLangTag, () => playNextChunk());
+        };
+
+        backendAudio.play().catch(() => {
+          fallbackSpeechSynthesis(chunk, targetLangTag, () => playNextChunk());
+        });
       };
 
-      audio.play().catch(() => {
-        // In case browser autoplay policy blocks Audio constructor without user gesture
-        fallbackSpeechSynthesis(cleanSpeech, targetLangTag);
-      });
+      audio.play().then(() => {
+        if (chunkIndex === 1) {
+          toast.success(`Speaking in ${activeLangObj.label.split(" ")[1] || "selected language"} 🔊`);
+        }
+      }).catch((playErr) => {
+        console.warn("Direct play failed, trying backend:", playErr);
+        const backendAudio = new Audio();
+        backendAudio.src = backendUrl;
+        currentAudioRef.current = backendAudio;
 
-      toast.success(`Playing native voice in ${activeLangObj.label.split(" ")[1] || "selected language"} 🔊`);
-    } catch {
-      fallbackSpeechSynthesis(cleanSpeech, targetLangTag);
-    }
+        backendAudio.onended = () => playNextChunk();
+        backendAudio.onerror = () => {
+          fallbackSpeechSynthesis(chunk, targetLangTag, () => playNextChunk());
+        };
+
+        backendAudio.play().catch(() => {
+          fallbackSpeechSynthesis(chunk, targetLangTag, () => playNextChunk());
+        });
+      });
+    };
+
+    playNextChunk();
   };
 
-  const fallbackSpeechSynthesis = (text: string, langTag: string) => {
+  const fallbackSpeechSynthesis = (text: string, langTag: string, onFinished?: () => void) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
       setSpeaking(false);
       toast.error("Text-to-speech is not supported on this browser.");
+      if (onFinished) onFinished();
       return;
     }
     window.speechSynthesis.cancel();
@@ -1099,8 +1215,14 @@ function ResultsScreen() {
       }
     }
 
-    utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
+    utterance.onend = () => {
+      if (onFinished) onFinished();
+      else setSpeaking(false);
+    };
+    utterance.onerror = () => {
+      if (onFinished) onFinished();
+      else setSpeaking(false);
+    };
 
     window.speechSynthesis.speak(utterance);
   };

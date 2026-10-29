@@ -71,14 +71,14 @@ class MedicalReportCreate(BaseModel):
 
 class MedicalReportResponse(BaseModel):
     id: int
-    patient_id: int
-    report_type: str
+    patient_id: Optional[int] = 1
+    report_type: str = "lab_report"
     file_name: Optional[str] = None
     file_url: Optional[str] = None
     raw_text: Optional[str] = None
     extracted_data: Optional[Dict[str, Any]] = None
     simplified_summary: Optional[Dict[str, Any]] = None
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

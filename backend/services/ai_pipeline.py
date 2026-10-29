@@ -421,12 +421,15 @@ class MedSimplifyAIPipeline:
 
         # Categorize parameters present strictly from extracted entities and raw_text
         entity_map = {e["entity"]: e for e in extracted_entities}
-        has_ige = any("ige" in e["entity"].lower() or "allergy" in e["entity"].lower() for e in extracted_entities) or any(k in combined_context for k in ["immunoglobulin ige", "rast", "allergy profile", "ige"])
         has_dengue = (
             "dengue" in combined_context
             or "ns1" in combined_context
             or any("dengue" in e["entity"].lower() for e in extracted_entities)
             or ("platelet" in combined_context and ("low" in combined_context or "80,000" in combined_context or "80000" in combined_context or "positive" in combined_context or "critical" in combined_context))
+        )
+        has_ige = (
+            any(re.search(r'\b(ige|allergy|allergen|rast)\b', e["entity"], re.IGNORECASE) for e in extracted_entities)
+            or bool(re.search(r'\b(immunoglobulin\s*e|ige|rast|allergen|allergy)\b', combined_context))
         )
         has_lipid = any(k in entity_map for k in ["Total Cholesterol", "Triglycerides", "HDL Cholesterol", "LDL Cholesterol"]) or bool(re.search(r'\b(lipid|cholesterol|triglyceride|ldl|hdl)\b', combined_context))
         has_cbc = any(k in entity_map for k in ["WBC Count", "Total Leukocyte Count (WBC)", "RBC Count", "Hemoglobin", "Hematocrit", "MCV", "Platelet Count"])
@@ -484,7 +487,32 @@ class MedSimplifyAIPipeline:
         has_lft = any(k in entity_map for k in ["SGPT / ALT", "SGOT / AST", "Bilirubin Total", "Bilirubin Direct", "Alkaline Phosphatase (ALP)"]) or bool(re.search(r'\b(lft|sgpt|sgot|bilirubin|liver function)\b', combined_context))
         has_anemia = (any(k in entity_map for k in ["Hemoglobin", "Hgb", "RBC Count", "Ferritin"]) and any(e.get("status") in ["Low", "LOW"] for e in extracted_entities if e.get("entity") in ["Hemoglobin", "Hgb", "RBC Count", "Ferritin"])) or bool(re.search(r'\b(anemia|anaemia|iron deficiency)\b', combined_context))
 
-        if has_ige:
+        if has_dengue:
+            title = "Complete Blood Count & Dengue Profile Analysis"
+            test_name = "Dengue Profile & Complete Blood Count"
+            standard_summary = "Your report confirms positive Dengue antigen status with reduced platelet counts requiring active fluid monitoring."
+            eli5_summary = (
+                "👷 Imagine your platelets as tiny emergency repair workers equipped with bandage tape inside your blood. When there is a tiny scratch, "
+                "they rush over to patch it up. The Dengue virus sends some workers home temporarily. Resting in bed, drinking ORS fluids and fresh coconut water "
+                "gives your body the strength to build a fresh crew of repair workers quickly!"
+            )
+            recommendations = [
+                "Drink 3 to 4 liters of oral fluids (ORSL, coconut water, fresh soups) daily.",
+                "Take complete bed rest to allow your body to recover.",
+                "Monitor platelet count daily with your healthcare provider.",
+                "Avoid NSAIDs like Ibuprofen or Aspirin; use Paracetamol for fever management."
+            ]
+            warning_signs = [
+                "Bleeding from nose or gums, or unexplained skin bruising",
+                "Black or bloody stools, or vomiting blood",
+                "Severe stomach pain or continuous vomiting",
+                "Cold, clammy skin or feeling faint / dizzy",
+                "Very little urine output for 6 hours or more"
+            ]
+            is_flagged = True
+            flagged_reason = "Dengue Profile POSITIVE with Thrombocytopenia"
+
+        elif has_ige:
             title = "Serum IgE Allergy Test Analysis"
             test_name = "Radioallergosorbent (RAST) - Immunoglobulin IgE, Serum"
             ige_entity = next((e for e in extracted_entities if "ige" in e["entity"].lower()), None)
@@ -520,31 +548,6 @@ class MedSimplifyAIPipeline:
                     "reference": ref,
                     "status": status
                 }]
-
-        elif has_dengue:
-            title = "Complete Blood Count & Dengue Profile Analysis"
-            test_name = "Dengue Profile & Complete Blood Count"
-            standard_summary = "Your report confirms positive Dengue antigen status with reduced platelet counts requiring active fluid monitoring."
-            eli5_summary = (
-                "👷 Imagine your platelets as tiny emergency repair workers equipped with bandage tape inside your blood. When there is a tiny scratch, "
-                "they rush over to patch it up. The Dengue virus sends some workers home temporarily. Resting in bed, drinking ORS fluids and fresh coconut water "
-                "gives your body the strength to build a fresh crew of repair workers quickly!"
-            )
-            recommendations = [
-                "Drink 3 to 4 liters of oral fluids (ORSL, coconut water, fresh soups) daily.",
-                "Take complete bed rest to allow your body to recover.",
-                "Monitor platelet count daily with your healthcare provider.",
-                "Avoid NSAIDs like Ibuprofen or Aspirin; use Paracetamol for fever management."
-            ]
-            warning_signs = [
-                "Bleeding from nose or gums, or unexplained skin bruising",
-                "Black or bloody stools, or vomiting blood",
-                "Severe stomach pain or continuous vomiting",
-                "Cold, clammy skin or feeling faint / dizzy",
-                "Very little urine output for 6 hours or more"
-            ]
-            is_flagged = True
-            flagged_reason = "Dengue Profile POSITIVE with Thrombocytopenia"
 
         elif has_diabetes or (has_diabetes and (has_cbc or has_lipid)):
             title = "Metabolic & Diabetes Diagnostics Analysis"
@@ -668,259 +671,45 @@ class MedSimplifyAIPipeline:
                 "Unusual bleeding, severe localized pain, or rapid symptom worsening"
             ]
 
-        # Build Multilingual dictionary for English, Tanglish, Hindi, Tamil, Telugu, Spanish
+        # Determine condition key strictly aligned to clinical findings
+        if has_dengue:
+            condition_key = "dengue"
+        elif has_ige:
+            condition_key = "ige"
+        elif has_diabetes or (has_diabetes and (has_cbc or has_lipid)):
+            condition_key = "diabetes"
+        elif has_anemia:
+            condition_key = "anemia"
+        elif has_lipid:
+            condition_key = "lipid"
+        elif has_lft:
+            condition_key = "lft"
+        else:
+            condition_key = "general"
+
+        # Build Multilingual dictionary from authentic Clinical Templates
+        try:
+            from services.clinical_templates import CLINICAL_TEMPLATES
+        except ImportError:
+            from app.services.clinical_templates import CLINICAL_TEMPLATES
+
+        cond_templates = CLINICAL_TEMPLATES.get(condition_key, CLINICAL_TEMPLATES["general"])
         multilingual = {
-            "en": {
-                "title": title,
-                "eli5_summary": eli5_summary,
-                "recommendations": recommendations,
-                "warning_signs": warning_signs
-            },
-            "tanglish": {
-                "title": (
-                    "Dengue & Platelet Report Analysis (Tanglish)" if has_dengue else
-                    "Sugar & Diabetes Report Analysis (Tanglish)" if has_diabetes else
-                    "Hemoglobin & Anemia Analysis (Tanglish)" if has_anemia else
-                    "Lipid & Cholesterol Analysis (Tanglish)" if has_lipid else
-                    "Allergy IgE Report Analysis (Tanglish)" if has_ige else
-                    "Liver Function LFT Analysis (Tanglish)" if has_lft else
-                    "Medical Report Analysis (Tanglish)"
-                ),
-                "eli5_summary": (
-                    "🚗 Ungaloada rathathai oru busy city highway-ah nenachu paarungga, sugar molecules thaan adhulaporra cars. Sugar rathathula adhigama irukum podhu (HbA1c & Fasting Glucose), highway-la severe traffic jam aagi road full-ah sticky aagidum! Green leafy vegetables, fiber diet saapittu, sweets-a thavirthaa extra sugar cars ellaam kuraidhu ratham smooth-ah odum."
-                    if has_diabetes else
-                    "👷 Unga platelets-a ratha kuzhaaikulla irukra chinna construction repair workers-ah nenachukonga. Dengue virus indha workers-a kuraichiduchu. Nalla rest eduthu, ORS & elaneer kudichaa body udane pudhu repair workers-a tayaar pannidum!"
-                    if has_dengue else
-                    "🚚 Hemoglobin-a unga rathathula irukra chinna red oxygen delivery trucks-ah nenachukonga. Unga report-la delivery trucks kuraivaa irukku, adhanala thaan tired-ah feel panreengga! Keerai, paruppu, Vitamin C saapdradhu puthiya delivery trucks-a create panna udhavum."
-                    if has_anemia else
-                    "🚰 Unga ratha kuzhaai-ah oru suthamaana thanni pipe-ah nenachukonga. Adhigamaana cholesterol & fat irundhaa, pipe ullara ennai podhadhi படிஞ்சு thanni poradhu kashtam aagum. Deep fried food-a thavirthu, daily 30 mins walk ponaa, pipe clean aagi ratham easy-ah flow aagum!"
-                    if has_lipid else
-                    "🔔 Unga immune system-a veettu burglar alarm system-ah nenachukonga. High IgE irundhaa alarm romba sensitive-ah aagidum, dust pollen vandhaa jor-ah bell adikkum! Triggers-a kandupidichu thavirthal alarm அமைதியா irukum."
-                    if has_ige else
-                    "💧 Unga liver-a oru heavy-duty water filter-ah nenachukonga. Liver enzymes adhigamnaa filter extra work pannudhu. Nalla thanni kudichu, oil foods-a thavirthal filter-ukku rest kidaichu dhaanaave repair aagidum!"
-                    if has_lft else
-                    "🏎️ Unga udal-a oru sports car tune-up check-up ah nenachukonga. Hood-ku keela irukra components ellaam top condition-la irukka-nu check pannirukom!"
-                ),
-                "recommendations": [
-                    "Diabetic-friendly low glycemic index food saapdungga, green vegetables & legumes saapdungga.",
-                    "Sweets, cool drinks, refined sugars thavirkkanum.",
-                    "Daily 30 mins walking poganum.",
-                    "Doctor-a consult panni regular follow-up pannungga."
-                ] if has_diabetes else [
-                    "Daily 3 to 4 liters ORSL water, elaneer, fresh soup kudikkanum.",
-                    "Bed rest kandaipaa edukka ventum.",
-                    "Daily platelet count monitor pannungga.",
-                    "Ibuprofen/Aspirin thavirthu Paracetamol mattum edungga."
-                ] if has_dengue else [
-                    "Keerai, spinach, paruppu, sundal adhigama saapdungga.",
-                    "Vitamin C foods (orange, lemon) kooda saapta iron nalla absorb aagum.",
-                    "Saapdorra podhu tea/coffee kudikka koodadhu.",
-                    "Regular-ah doctor-a paarthu Hemoglobin check pannungga."
-                ],
-                "warning_signs": [
-                    "Extreme tiredness, confusion, or unusual breath odor",
-                    "Adhigamaana thaagam matrum frequent urination",
-                    "Severe dizziness, shakiness, or cold sweat (Low Sugar crisis)",
-                    "Blurry vision or kaddumaana thalaivali",
-                    "Nenju vali or moochu vaangudhal"
-                ]
-            },
-            "hi": {
-                "title": (
-                    "डेंगू और प्लेटलेट रिपोर्ट विश्लेषण" if has_dengue else
-                    "मधुमेह और मेटाबॉलिक रिपोर्ट विश्लेषण" if has_diabetes else
-                    "एनीमिया और हीमोग्लोबिन रिपोर्ट विश्लेषण" if has_anemia else
-                    "कोलेस्ट्रॉल और लिपिड रिपोर्ट विश्लेषण" if has_lipid else
-                    "एलर्जी और इम्युनोग्लोबुलिन IgE विश्लेषण" if has_ige else
-                    "लिवर फंक्शन (LFT) रिपोर्ट विश्लेषण" if has_lft else
-                    "चिकित्सा रिपोर्ट विश्लेषण"
-                ),
-                "eli5_summary": (
-                    "🚗 अपने रक्तप्रवाह को एक व्यस्त शहर के हाईवे की तरह समझें, और शुगर के कण गाड़ियां हैं। जब रक्त में शुगर ज्यादा हो जाती है (HbA1c और ग्लूकोज), तो हाईवे पर भारी ट्रैफिक जाम लग जाता है और सड़कें चिपचिपी हो जाती हैं! हरी पत्तेदार सब्जियां और कम चीनी वाला भोजन खाने से अतिरिक्त गाड़ियां हट जाती हैं और रक्त का बहाव फिर से सुचारू हो जाता है।"
-                    if has_diabetes else
-                    "👷 प्लेटलेट्स को अपने खून की नसों के अंदर छोटे मरम्मत करने वाले कारीगर समझें। डेंगू वायरस ने इन कारीगरों की संख्या कम कर दी है। पूरा आराम करने, ओआरएस घोल और नारियल पानी पीने से आपका शरीर जल्दी ही नए कारीगर बना लेता है!"
-                    if has_dengue else
-                    "🚚 हीमोग्लोबिन को अपने शरीर के अंदर लाल रंग के छोटे ऑक्सीजन डिलीवरी ट्रक समझें। आपकी रिपोर्ट दिखाती है कि अभी इन ट्रकों की संख्या कम है, इसीलिए आप थकान महसूस करते हैं! हरी पत्तेदार सब्जियां (पालक), दालें और विटामिन सी युक्त भोजन खाने से शरीर में नए डिलीवरी ट्रक बनने लगते हैं।"
-                    if has_anemia else
-                    "🚰 अपनी रक्त वाहिकाओं को पानी के साफ पाइप की तरह समझें। उच्च कोलेस्ट्रॉल और वसा पाइप की अंदरूनी दीवारों पर जमी हुई चिकनाई की तरह है। तली हुई चीजों से परहेज करने और रोजाना 30 मिनट टहलने से पाइप की दीवारें साफ होती हैं और खून आसानी से बहता है!"
-                    if has_lipid else
-                    "🔔 अपने प्रतिरक्षा तंत्र को घर के अलार्म सिस्टम की तरह समझें। उच्च IgE का मतलब है कि अलार्म की संवेदनशीलता बहुत ज्यादा है! एलर्जी के कारणों से बचकर रहने से आपका अलार्म शांत रहता है।"
-                    if has_ige else
-                    "💧 अपने लिवर को पानी के भारी-भरकम फिल्टर की तरह समझें। भरपूर पानी पीने और भारी भोजन से बचने से आपके फिल्टर को आराम मिलता है और वह खुद को ठीक कर लेता है!"
-                    if has_lft else
-                    "🏎️ अपने शरीर को एक स्पोर्ट्स कार की तरह समझें जिसका नियमित ट्यून-अप चेकअप हो रहा है। हमने सभी घटकों की जांच की है ताकि वे बेहतरीन स्थिति में चलें!"
-                ),
-                "recommendations": [
-                    "मधुमेह अनुकूल कम ग्लाइसेमिक इंडेक्स वाला आहार (हरी सब्जियां, दालें) अपनाएं।",
-                    "मिठाई, चीनी युक्त पेय और परिष्कृत कार्बोहाइड्रेट से बचें।",
-                    "रोजाना 30 मिनट का मध्यम व्यायाम (तेज चाल) करें।",
-                    "ब्लड शुगर प्रबंधन के लिए अपने डॉक्टर से परामर्श लें।"
-                ] if has_diabetes else [
-                    "रोजाना 3 से 4 लीटर तरल पदार्थ (ओआरएस, नारियल पानी, सूप) पीएं।",
-                    "शरीर को ठीक होने देने के लिए पूरा बेड रेस्ट लें।",
-                    "प्रतिदिन प्लेटलेट काउंट की निगरानी करें।",
-                    "बुखार के लिए केवल पैरासिटामोल लें, एस्पिरिन/आइबूप्रोफेन से बचें।"
-                ] if has_dengue else [
-                    "आयरन से भरपूर खाद्य पदार्थ (पालक, साग, दालें, अनार) का सेवन बढ़ाएं।",
-                    "आयरन के अवशोषण को बढ़ाने के लिए विटामिन सी (संतरा, नींबू) लें।",
-                    "खाने के तुरंत बाद चाय या कॉफी पीने से बचें।",
-                    "हीमोग्लोबिन स्तर की निगरानी के लिए डॉक्टर से संपर्क करें।"
-                ],
-                "warning_signs": [
-                    "अत्यधिक थकान, भ्रम, या सांस से अजीब गंध आना",
-                    "अत्यधिक प्यास लगना और बार-बार पेशाब आना",
-                    "गंभीर चक्कर आना, कपकपाहट या ठंडा पसीना आना (लो शुगर संकट)",
-                    "धुंधली दृष्टि या लगातार तेज सिरदर्द",
-                    "सांस लेने में तकलीफ या छाती में जकड़न"
-                ]
-            },
-            "ta": {
-                "title": (
-                    "டெங்கு மற்றும் பிளேட்லெட் அறிக்கை பகுப்பாய்வு" if has_dengue else
-                    "சர்க்கரை நோய் மற்றும் மெட்டாபாலிசிம் அறிக்கை பகுப்பாய்வு" if has_diabetes else
-                    "ரத்தசோகை மற்றும் ஹீமோகுளோபின் அறிக்கை பகுப்பாய்வு" if has_anemia else
-                    "கொலஸ்ட்ரால் மற்றும் கொழுப்பு பரிசோதனை அறிக்கை" if has_lipid else
-                    "ஒவ்வாமை மற்றும் IgE பரிசோதனை அறிக்கை" if has_ige else
-                    "கல்லீரல் செயல்பாடு (LFT) அறிக்கை பகுப்பாய்வு" if has_lft else
-                    "மருத்துவ பரிசோதனை அறிக்கை பகுப்பாய்வு"
-                ),
-                "eli5_summary": (
-                    "🚗 உங்கள் ரத்த ஓட்டத்தை ஒரு பரபரப்பான நகர நெடுஞ்சாலையாக நினைத்துப் பாருங்கள். சர்க்கரை மூலக்கூறுகள் தான் அதில் செல்லும் கார்கள். ரத்தத்தில் சர்க்கரை அளவு அதிகரிக்கும் போது (HbA1c & Fasting Glucose), நெடுஞ்சாலையில் பெரிய போக்குவரத்து நெரிசல் ஏற்பட்டு சாலைகள் ஒட்டும் தன்மையுடையதாக மாறிவிடும்! புதிய பச்சை காய்கறிகள் மற்றும் நார்சத்து உணவுகளை சாப்பிட்டு, இனிப்புகளை தவிர்த்தால் கூடுதல் கார்கள் விலகி ரத்த ஓட்டம் சீராகும்."
-                    if has_diabetes else
-                    "👷 பிளேட்லெட்டுகளை உங்கள் ரத்த நாளங்களுக்குள் இருக்கும் சிறிய அவசர பழுதுபார்க்கும் தொழிலாளர்களாக நினைத்துக் கொள்ளுங்கள். டெங்கு வைரஸ் இந்த தொழிலாளர்களின் எண்ணிக்கையை தற்காலிகமாகக் குறைத்துள்ளது. நன்றாக ஓய்வெடுத்து, ORS மற்றும் இளநீர் குடிப்பதால் உடல் புதிய தொழிலாளர்களை விரைவாக உருவாக்க உதவும்!"
-                    if has_dengue else
-                    "🚚 ஹீமோகுளோபினை உங்கள் ரத்தத்தில் உள்ள சிறிய சிவப்பு ஆக்சிஜன் விநியோக லாரிகளாக நினைத்துக் கொள்ளுங்கள். உங்கள் அறிக்கையில் இந்த லாரிகளின் எண்ணிக்கை குறைவாக உள்ளது, அதனால் தான் சோர்வாக உணர்கிறீர்கள்! கீரை, பருப்பு வகைகள் மற்றும் வைட்டமின் சி உணவுகளை சாப்பிடுவது புதிய விநியோக லாரிகளை உருவாக்க உதவும்."
-                    if has_anemia else
-                    "🚰 உங்கள் ரத்த நாளங்களை சுத்தமான தண்ணீர் குழாயாக நினைத்துக் கொள்ளுங்கள். அதிக கொலஸ்ட்ரால் மற்றும் கொழுப்பு என்பது குழாயின் உட்புறத்தில் எண்ணெய் பிசுக்கு படிவது போன்றது. பொரித்த உணவுகளை தவிர்த்து, தினமும் 30 நிமிடம் நடைபயிற்சி செய்தால் குழாய் சுவர்கள் சுத்தமாகி ரத்த ஓட்டம் சுலபமாகும்!"
-                    if has_lipid else
-                    "🔔 உங்கள் நோய் எதிர்ப்பு மண்டலத்தை ஒரு வீட்டு பாதுகாப்பு அலாரமாக நினைத்துக் கொள்ளுங்கள். அதிக IgE என்பது அலாரத்தின் உணர்திறன் மிகவும் அதிகமாக உள்ளது என்பதாகும்! ஒவ்வாமை தூண்டிகளை தவிர்ப்பதன் மூலம் அலாரம் அமைதியாக இருக்கும்."
-                    if has_ige else
-                    "💧 உங்கள் கல்லீரலை ஒரு வாட்டர் ஃபில்டராக நினைத்துக் கொள்ளுங்கள். நிறைய தண்ணீர் குடித்து, எண்ணெய் உணவுகளை தவிர்த்தால் ஃபில்டருக்கு ஓய்வு கிடைத்து தானாகவே சரியாகும்!"
-                    if has_lft else
-                    "🏎️ உங்கள் உடலை ஒரு ஸ்போர்ட்ஸ் காரின் வழக்கமான டியூன்-அப் சோதனையாக நினைத்துக் கொள்ளுங்கள். அனைத்து கூறுகளும் சிறந்த முறையில் இயங்குவதை உறுதிசெய்ய நாங்கள் சோதித்துள்ளோம்!"
-                ),
-                "recommendations": [
-                    "சர்க்கரை நோயாளிகளுக்கு ஏற்ற குறைந்த கிளைசெமிக் உணவுகளை (கீரை, பருப்பு, காய்கறி) உண்ணுங்கள்.",
-                    "இனிப்புகள், கூல் ட்ரிங்க்ஸ் மற்றும் சுத்திகரிக்கப்பட்ட சர்க்கரையை தவிர்க்கவும்.",
-                    "தினமும் 30 நிமிடங்கள் நடைபயிற்சி செய்யவும்.",
-                    "ரத்த சர்க்கரை அளவை கண்காணிக்க மருத்துவரை அணுகவும்."
-                ] if has_diabetes else [
-                    "தினமும் 3 முதல் 4 லிட்டர் ORS நீர், இளநீர் மற்றும் சூப் அருந்தவும்.",
-                    "உடல் குணமாக முழுமையான படுக்கை ஓய்வு எடுக்கவும்.",
-                    "தினமும் பிளேட்லெட் எண்ணிக்கையை கண்காணிக்கவும்.",
-                    "பாராசிட்டமால் மட்டும் பயன்படுத்தவும், ஆஸ்பிரின்/இப்யூப்ரோஃபெனை தவிர்க்கவும்."
-                ] if has_dengue else [
-                    "இரும்புச்சத்து நிறைந்த உணவுகளை (கீரை, முருங்கை, பருப்பு) அதிகளவில் உட்கொள்ளுங்கள்.",
-                    "இரும்புச்சத்து உறிஞ்சுதலை அதிகரிக்க வைட்டமின் சி (எலுமிச்சை, ஆரஞ்சு) உணவுகளை சேர்க்கவும்.",
-                    "உணவருந்தும்போது டீ அல்லது காபி குடிப்பதை தவிர்க்கவும்.",
-                    "ஹீமோகுளோபின் அளவை சரிபார்க்க மருத்துவரை அணுகவும்."
-                ],
-                "warning_signs": [
-                    "கடும் சோர்வு, குழப்பம் அல்லது மூச்சில் விசித்திரமான வாசனை",
-                    "அதிகப்படியான தாகம் மற்றும் அடிக்கடி சிறுநீர் கழித்தல்",
-                    "கடுமையான தலைச்சுற்றல், நடுக்கம் அல்லது குளிர்ந்த வேர்வை (குறைந்த சர்க்கரை நிலை)",
-                    "மங்கலான பார்வை அல்லது கடுமையான தலைவலி",
-                    "மூச்சுத்திணறல் அல்லது நெஞ்சு இறுக்கம்"
-                ]
-            },
-            "te": {
-                "title": (
-                    "డెంగ్యూ మరియు ప్లేట్‌లెట్ నివేదిక విశ్లేషణ" if has_dengue else
-                    "మధుమేహం మరియు మెటబాలిక్ నివేదిక విశ్లేషణ" if has_diabetes else
-                    "రక్తహీనత మరియు హిమోగ్లోబిన్ నివేదిక విశ్లేషణ" if has_anemia else
-                    "కొలెస్ట్రాల్ మరియు లిపిడ్ ప్రొఫైల్ విశ్లేషణ" if has_lipid else
-                    "అలెర్జీ ప్రొఫైల్ నివేదిక విశ్లేషణ" if has_ige else
-                    "కాలేయ పనితీరు (LFT) నివేదిక విశ్లేషణ" if has_lft else
-                    "వైద్య నివేదిక విశ్లేషణ"
-                ),
-                "eli5_summary": (
-                    "🚗 మీ రక్త ప్రవాహాన్ని రద్దీగా ఉండే నగర రహదారిగా ఊహించుకోండి, మరియు చక్కెర అణువులు కార్లు. రక్తంలో చక్కెర పరిమాణం పెరిగినప్పుడు (HbA1c & ఫాస్టింగ్ గ్లూకోజ్), రహదారిపై భారీ ట్రాఫిక్ జామ్ ఏర్పడి రహదారులు జిగటగా మారతాయి! ఆకుకూరలు మరియు ఫైబర్ ఆహారం తీసుకోవడం ద్వారా అదనపు కార్లు తొలగిపోయి రక్త ప్రవాహం మళ్లీ సులభంగా మారుతుంది."
-                    if has_diabetes else
-                    "👷 ప్లేట్‌లెట్లను మీ రక్తనాళాల లోపల ఉండే చిన్న అత్యవసర మరమ్మతు కార్మికులుగా ఊహించుకోండి. డెంగ్యూ వైరస్ ఈ కార్మికుల సంఖ్యను తగ్గించింది. రెస్ట్ తీసుకోవడం, ORS డ్రింక్స్ మరియు కొబ్బరి నీరు తాగడం ద్వారా మీ శరీరం త్వరగా కొత్త మరమ్మతు కార్మికులను తయారు చేసుకుంటుంది!"
-                    if has_dengue else
-                    "🚚 హిమోగ్లోబిన్‌ను మీ శరీరంలోని చిన్న ఎరుపు ఆక్సిజన్ డెలివరీ ట్రక్కులుగా ఊహించుకోండి. మీ నివేదికలో ఈ ట్రక్కుల సంఖ్య తక్కువగా ఉంది, అందుకే మీరు అలసటగా అనిపిస్తారు! ఆకుకూరలు, పప్పుధాన్యాలు మరియు విటమిన్ సి ఆహారం తీసుకోవడం కొత్త డెలివరీ ట్రక్కులను తయారు చేయడానికి సహాయపడుతుంది."
-                    if has_anemia else
-                    "🚰 మీ రక్తనాళాలను శుభ్రమైన నీటి పైపుగా ఊహించుకోండి. అధిక కొలెస్ట్రాల్ మరియు కొవ్వు పైపు లోపలి గోడలపై నూనె జిడ్డులా పేరుకుపోతుంది. వేయించిన ఆహారాలను తగ్గించి, రోజువారీ 30 నిమిషాలు నడవడం ద్వారా పైపు గోడలు శుభ్రపడి రక్త ప్రవాహం సులభమవుతుంది!"
-                    if has_lipid else
-                    "🔔 మీ రోగనిరోధక వ్యవస్థను ఇంటి దొంగల అలారం వ్యవస్థగా ఊహించుకోండి. అధిక IgE అంటే మీ అలారం సున్నితత్వం చాలా ఎక్కువగా ఉందని అర్థం! అలెర్జీ ప్రేరేపకాలను నివారించడం ద్వారా అలారం ప్రశాంతంగా ఉంటుంది."
-                    if has_ige else
-                    "💧 మీ కాలేయాన్ని నీటి ఫిల్టర్‌గా ఊహించుకోండి. సమృద్ధిగా నీరు తాగడం మరియు జిడ్డుగల ఆహారాన్ని నివారించడం వల్ల ఫిల్టర్‌కు విశ్రాంతి లభిస్తుంది!"
-                    if has_lft else
-                    "🏎️ మీ శరీరాన్ని ఒక స్పోర్ట్స్ కార్ యొక్క సాధారణ ట్యూన్-అప్ తనిఖీగా అనుకోండి. అన్ని భాగాలు అగ్రస్థానంలో నడుస్తున్నాయని నిర్ధారించుకోవడానికి మేము పరిశీలించాము!"
-                ),
-                "recommendations": [
-                    "డయాబెటిస్-అనుకూలమైన తక్కువ గ్లైసెమిక్ ఇండెక్స్ ఆహారాన్ని స్వీకరించండి.",
-                    "తీపి పదార్థాలు మరియు మైదా ఉత్పత్తులను నివారించండి.",
-                    "రోజూ 30 నిమిషాలు వేగంగా నడవండి.",
-                    "రక్తంలో చక్కెర స్థాయిల పర్యవేక్షణ కోసం మీ వైద్యుడిని సంప్రదించండి."
-                ] if has_diabetes else [
-                    "రోజూ 3 నుండి 4 లీటర్ల ద్రవాలు (ORS, కొబ్బరి నీరు) తీసుకోండి.",
-                    "పూర్తి బెడ్ రెస్ట్ తీసుకోండి.",
-                    "రోజూ ప్లేట్‌లెట్ కౌంట్‌ను పరిశీలించండి.",
-                    "జ్వరం కోసం పారాసిటమాల్ మాత్రమే ఉపయోగించండి."
-                ] if has_anemia else [
-                    "ఐరన్ సమృద్ధిగా ఉండే ఆహారాలు (ఆకుకూరలు, పప్పులు) తీసుకోవడం పెంచండి.",
-                    "ఐరన్ గ్రహణశక్తిని పెంచడానికి విటమిన్ సి (నారింజ, నిమ్మ) తీసుకోండి.",
-                    "భోజనంతో పాటు టీ లేదా కాఫీ తాగడం నివారించండి.",
-                    "హిమోగ్లోబిన్ పరిశీలన కోసం వైద్యుడిని సంప్రదించండి."
-                ],
-                "warning_signs": [
-                    "అత్యధిక అలసట, అయోమయం లేదా శ్వాసలో వింత వాసన",
-                    "అధిక దాహం మరియు తరచుగా మూత్ర విసర్జన",
-                    "తీవ్రమైన మైకం, వణుకు లేదా చల్లని చెమట (తక్కువ చక్కెర అత్యవసర పరిస్థితి)",
-                    "సస్పష్టంగా కనిపించకపోవడం లేదా తీవ్రమైన తలనొప్పి",
-                    "శ్వాస తీసుకోవడంలో ఇబ్బంది లేదా ఛాతీలో ఒత్తిడి"
-                ]
-            },
-            "es": {
-                "title": (
-                    "Análisis de Perfil de Dengue y Hemograma" if has_dengue else
-                    "Análisis de Diagnóstico Metabólico y Diabetes" if has_diabetes else
-                    "Análisis de Hemograma y Perfil de Anemia" if has_anemia else
-                    "Análisis de Perfil Lipídico y Colesterol" if has_lipid else
-                    "Análisis de Inmunoglobulina IgE y Alergias" if has_ige else
-                    "Análisis de Pruebas de Función Hepática (LFT)" if has_lft else
-                    "Análisis de Informe Médico General"
-                ),
-                "eli5_summary": (
-                    "🚗 Imagine su torrente sanguíneo como una carretera transitada y las moléculas de azúcar como automóviles. Cuando el azúcar aumenta (HbA1c y glucosa), se produce un gran embotellamiento que ralentiza todo. Comer verduras frescas y fibra ayuda a despejar los autos adicionales para que el tráfico fluya sin problemas."
-                    if has_diabetes else
-                    "👷 Imagine sus plaquetas como pequeños trabajadores de reparación de emergencia dentro de sus vasos sanguíneos. El virus del dengue reduce temporalmente estos trabajadores. Descansar y beber líquidos como suero y agua de coco ayuda a su cuerpo a crear rápidamente un nuevo equipo de reparación."
-                    if has_dengue else
-                    "🚚 Imagine la hemoglobina como pequeños camiones rojos de entrega de oxígeno en su sangre. Su informe muestra que actualmente le faltan camiones de entrega, por eso se siente cansado. Comer verduras de hoja verde, lentejas y vitamina C ayuda a construir nuevos camiones para su cuerpo."
-                    if has_anemia else
-                    "🚰 Imagine sus vasos sanguíneos como tuberías de agua limpias. El alto nivel de colesterol es como una capa de aceite en las paredes de las tuberías. Reducir los alimentos fritos y caminar 30 minutos al día ayuda a limpiar las tuberías para que la sangre fluya fácilmente."
-                    if has_lipid else
-                    "🔔 Imagine su sistema inmunológico como una alarma de seguridad. Un IgE alto significa que la alarma está demasiado sensible. Evitar los desencadenantes mantiene la alarma en calma."
-                    if has_ige else
-                    "💧 Imagine su hígado como un filtro de agua doméstico. Beber mucha agua y evitar alimentos pesados le da descanso a su filtro."
-                    if has_lft else
-                    "🏎️ Piense en su cuerpo como un automóvil deportivo que recibe una revisión de rutina. ¡Revisamos debajo del capó para asegurarnos de que todo funcione en óptimas condiciones!"
-                ),
-                "recommendations": [
-                    "Adopte una dieta de bajo índice glucémico rica en verduras y legumbres.",
-                    "Evite azúcares refinados, dulces y bebidas azucaradas.",
-                    "Realice 30 minutos de ejercicio moderado diario.",
-                    "Consulte a su médico para el control de la glucosa en sangre."
-                ] if has_diabetes else [
-                    "Beba de 3 a 4 litros de líquidos (suero oral, agua de coco) al día.",
-                    "Mantenga reposo absoluto en cama.",
-                    "Monitoree el recuento de plaquetas diariamente.",
-                    "Use solo paracetamol para la fiebre; evite la aspirina o el ibuprofeno."
-                ] if has_dengue else [
-                    "Aumente el consumo de alimentos ricos en hierro (espinacas, lentejas).",
-                    "Combine alimentos con hierro y vitamina C (naranjas, limones) para mejorar la absorción.",
-                    "Evite tomar té o café directamente con las comidas.",
-                    "Consulte a su médico para monitorear los niveles de hemoglobina."
-                ],
-                "warning_signs": [
-                    "Fatiga extrema, confusión o aliento con olor a fruta",
-                    "Sed extrema e micción inusualmente frecuente",
-                    "Mareos severos, temblores o sudor frío (Crisis de azúcar baja)",
-                    "Visión borrosa o dolor de cabeza severo",
-                    "Falta de aire o presión en el pecho"
-                ]
+            lang: {
+                "title": cond_templates[lang]["title"],
+                "eli5_summary": cond_templates[lang]["eli5"],
+                "recommendations": cond_templates[lang]["actions"],
+                "warning_signs": cond_templates[lang]["warnings"]
             }
+            for lang in ["en", "tanglish", "hi", "ta", "te", "es"]
+        }
+
+        # Override English with any custom report specifics
+        multilingual["en"] = {
+            "title": title,
+            "eli5_summary": eli5_summary,
+            "recommendations": recommendations,
+            "warning_signs": warning_signs
         }
 
         return {
@@ -929,6 +718,7 @@ class MedSimplifyAIPipeline:
             "age": age,
             "gender": gender,
             "test_name": test_name,
+            "condition_key": condition_key,
             "raw_text": raw_text,
             "extracted_entities": extracted_entities,
             "standard_summary": standard_summary,
@@ -995,7 +785,7 @@ class MedSimplifyAIPipeline:
         has_diabetes = "diabetes" in combined or "glucose" in combined or "hba1c" in combined or "sugar" in combined
         has_anemia = "anemia" in combined or "hemoglobin" in combined or "ferritin" in combined or "iron" in combined
         has_lipid = "lipid" in combined or "cholesterol" in combined or "triglyceride" in combined or "hdl" in combined or "ldl" in combined
-        has_ige = "ige" in combined or "allergy" in combined or "allergen" in combined
+        has_ige = bool(re.search(r'\b(ige|allergy|allergen|rast|immunoglobulin)\b', combined))
         has_lft = "lft" in combined or "liver" in combined or "sgpt" in combined or "sgot" in combined or "bilirubin" in combined
 
         # Native pre-built medical translation templates

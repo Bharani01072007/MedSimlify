@@ -72,19 +72,21 @@ async def generate_tts_audio_bytes(text: str, lang: str = "en") -> bytes:
     """Generates authentic native MP3 audio stream for Tamil, Hindi, Telugu, Spanish, Tanglish, and English."""
     import httpx
     import re
-    # Remove emojis, markdown formatting, symbols while preserving native language characters
-    clean = re.sub(r'[^\w\s\.,;:!\?\-\'\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F]', ' ', text)
+    import asyncio
+
+    # Remove emojis, markdown formatting, symbols while preserving native language & Spanish characters
+    clean = re.sub(r'[^\w\s\.,;:!\?\-\'\u00C0-\u024F\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F]', ' ', text)
     clean = re.sub(r'\s+', ' ', clean).strip()
     if not clean:
         clean = "MedSimplify Medical Report Summary"
 
     lang_map = {
-        "ta": "ta", "tamil": "ta",
-        "hi": "hi", "hindi": "hi",
-        "te": "te", "telugu": "te",
-        "es": "es", "spanish": "es",
+        "ta": "ta", "tamil": "ta", "ta-in": "ta",
+        "hi": "hi", "hindi": "hi", "hi-in": "hi",
+        "te": "te", "telugu": "te", "te-in": "te",
+        "es": "es", "spanish": "es", "es-es": "es",
         "tanglish": "en-in",
-        "en": "en", "english": "en"
+        "en": "en", "english": "en", "en-us": "en", "en-in": "en-in"
     }
     tl = lang_map.get(lang.lower().strip(), "en")
 
@@ -105,20 +107,29 @@ async def generate_tts_audio_bytes(text: str, lang: str = "en") -> bytes:
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        for chunk in chunks[:12]:
-            if not chunk or len(chunk.strip()) < 2:
-                continue
+
+    valid_chunks = [c.strip() for c in chunks[:12] if c and len(c.strip()) >= 2]
+    if not valid_chunks:
+        valid_chunks = [clean[:150]]
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        async def fetch_chunk(c: str) -> bytes:
             try:
                 resp = await client.get(
                     "https://translate.google.com/translate_tts",
-                    params={"ie": "UTF-8", "tl": tl, "client": "tw-ob", "q": chunk},
+                    params={"ie": "UTF-8", "tl": tl, "client": "tw-ob", "q": c},
                     headers=headers
                 )
                 if resp.status_code == 200:
-                    audio_bytes.extend(resp.content)
+                    return resp.content
             except Exception:
                 pass
+            return b""
+
+        results = await asyncio.gather(*[fetch_chunk(c) for c in valid_chunks])
+        for r in results:
+            if r:
+                audio_bytes.extend(r)
 
     return bytes(audio_bytes)
 
