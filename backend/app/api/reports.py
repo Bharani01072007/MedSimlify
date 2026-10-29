@@ -81,7 +81,7 @@ async def upload_report(
         processed = ai_pipeline.process_document(raw_text=extracted_text, language=language, filename=file_name)
 
         # Derive a human-friendly descriptive report title
-        summary_title = (processed.get("simplified_summary") or {}).get("report_title", "").replace("📊 ", "").replace("📋 ", "").replace("🔍 ", "").strip()
+        summary_title = ((processed.get("simplified_summary") or {}).get("title") or (processed.get("simplified_summary") or {}).get("report_title") or "").replace("📊 ", "").replace("📋 ", "").replace("🔍 ", "").strip()
         if not file or file_name in ["sample_report.pdf", "string", "uploaded_report.pdf"]:
             if summary_title:
                 file_name = summary_title

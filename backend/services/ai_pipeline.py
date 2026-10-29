@@ -409,20 +409,28 @@ class MedSimplifyAIPipeline:
 
         return entities
 
-    def simplify_report(self, raw_text: str) -> Dict[str, Any]:
+    def simplify_report(self, raw_text: str, filename: str = "") -> Dict[str, Any]:
         """
         Simplifies complex medical report text dynamically based strictly on extracted entities.
         Ensures zero hallucinated test parameters or medications.
         """
         extracted_entities = self.extract_medical_entities(raw_text)
 
+        # Build comprehensive lowercase search context from text, filename and extracted entities
+        combined_context = (raw_text + " " + filename + " " + " ".join([e["entity"] + " " + str(e.get("value", "")) + " " + str(e.get("status", "")) for e in extracted_entities])).lower()
+
         # Categorize parameters present strictly from extracted entities and raw_text
         entity_map = {e["entity"]: e for e in extracted_entities}
-        has_ige = any("ige" in e["entity"].lower() or "allergy" in e["entity"].lower() for e in extracted_entities) or any(k in raw_text.lower() for k in ["immunoglobulin ige", "rast", "allergy profile"])
-        has_dengue = any("dengue" in e["entity"].lower() for e in extracted_entities) or ("dengue ns1" in raw_text.lower())
-        has_lipid = any(k in entity_map for k in ["Total Cholesterol", "Triglycerides", "HDL Cholesterol", "LDL Cholesterol"])
+        has_ige = any("ige" in e["entity"].lower() or "allergy" in e["entity"].lower() for e in extracted_entities) or any(k in combined_context for k in ["immunoglobulin ige", "rast", "allergy profile", "ige"])
+        has_dengue = (
+            "dengue" in combined_context
+            or "ns1" in combined_context
+            or any("dengue" in e["entity"].lower() for e in extracted_entities)
+            or ("platelet" in combined_context and ("low" in combined_context or "80,000" in combined_context or "80000" in combined_context or "positive" in combined_context or "critical" in combined_context))
+        )
+        has_lipid = any(k in entity_map for k in ["Total Cholesterol", "Triglycerides", "HDL Cholesterol", "LDL Cholesterol"]) or bool(re.search(r'\b(lipid|cholesterol|triglyceride|ldl|hdl)\b', combined_context))
         has_cbc = any(k in entity_map for k in ["WBC Count", "Total Leukocyte Count (WBC)", "RBC Count", "Hemoglobin", "Hematocrit", "MCV", "Platelet Count"])
-        has_diabetes = any(k in entity_map for k in ["HbA1c", "Fasting Blood Sugar", "Post Prandial Sugar"])
+        has_diabetes = any(k in entity_map for k in ["HbA1c", "Fasting Blood Sugar", "Post Prandial Sugar"]) or bool(re.search(r'\b(diabetes|glucose|sugar|hba1c|fasting blood sugar)\b', combined_context))
 
         # Extract Patient Metadata dynamically
         patient_name = "Patient"
@@ -473,8 +481,8 @@ class MedSimplifyAIPipeline:
         flagged_reason = "All extracted parameters within normal reference ranges."
 
         # Determine Title, Summaries & Recommendations based on extracted entities & text
-        has_lft = any(k in entity_map for k in ["SGPT / ALT", "SGOT / AST", "Bilirubin Total", "Bilirubin Direct", "Alkaline Phosphatase (ALP)"]) or bool(re.search(r'\b(lft|sgpt|sgot|bilirubin|liver function)\b', raw_text, re.IGNORECASE))
-        has_anemia = any(k in entity_map for k in ["Hemoglobin", "Hgb", "RBC Count", "Ferritin"]) and any(e.get("status") == "Low" for e in extracted_entities if e.get("entity") in ["Hemoglobin", "Hgb", "RBC Count", "Ferritin"])
+        has_lft = any(k in entity_map for k in ["SGPT / ALT", "SGOT / AST", "Bilirubin Total", "Bilirubin Direct", "Alkaline Phosphatase (ALP)"]) or bool(re.search(r'\b(lft|sgpt|sgot|bilirubin|liver function)\b', combined_context))
+        has_anemia = (any(k in entity_map for k in ["Hemoglobin", "Hgb", "RBC Count", "Ferritin"]) and any(e.get("status") in ["Low", "LOW"] for e in extracted_entities if e.get("entity") in ["Hemoglobin", "Hgb", "RBC Count", "Ferritin"])) or bool(re.search(r'\b(anemia|anaemia|iron deficiency)\b', combined_context))
 
         if has_ige:
             title = "Serum IgE Allergy Test Analysis"
@@ -669,7 +677,15 @@ class MedSimplifyAIPipeline:
                 "warning_signs": warning_signs
             },
             "tanglish": {
-                "title": f"{title} (Tanglish)",
+                "title": (
+                    "Dengue & Platelet Report Analysis (Tanglish)" if has_dengue else
+                    "Sugar & Diabetes Report Analysis (Tanglish)" if has_diabetes else
+                    "Hemoglobin & Anemia Analysis (Tanglish)" if has_anemia else
+                    "Lipid & Cholesterol Analysis (Tanglish)" if has_lipid else
+                    "Allergy IgE Report Analysis (Tanglish)" if has_ige else
+                    "Liver Function LFT Analysis (Tanglish)" if has_lft else
+                    "Medical Report Analysis (Tanglish)"
+                ),
                 "eli5_summary": (
                     "🚗 Ungaloada rathathai oru busy city highway-ah nenachu paarungga, sugar molecules thaan adhulaporra cars. Sugar rathathula adhigama irukum podhu (HbA1c & Fasting Glucose), highway-la severe traffic jam aagi road full-ah sticky aagidum! Green leafy vegetables, fiber diet saapittu, sweets-a thavirthaa extra sugar cars ellaam kuraidhu ratham smooth-ah odum."
                     if has_diabetes else
@@ -710,7 +726,15 @@ class MedSimplifyAIPipeline:
                 ]
             },
             "hi": {
-                "title": f"{title} (हिन्दी)",
+                "title": (
+                    "डेंगू और प्लेटलेट रिपोर्ट विश्लेषण" if has_dengue else
+                    "मधुमेह और मेटाबॉलिक रिपोर्ट विश्लेषण" if has_diabetes else
+                    "एनीमिया और हीमोग्लोबिन रिपोर्ट विश्लेषण" if has_anemia else
+                    "कोलेस्ट्रॉल और लिपिड रिपोर्ट विश्लेषण" if has_lipid else
+                    "एलर्जी और इम्युनोग्लोबुलिन IgE विश्लेषण" if has_ige else
+                    "लिवर फंक्शन (LFT) रिपोर्ट विश्लेषण" if has_lft else
+                    "चिकित्सा रिपोर्ट विश्लेषण"
+                ),
                 "eli5_summary": (
                     "🚗 अपने रक्तप्रवाह को एक व्यस्त शहर के हाईवे की तरह समझें, और शुगर के कण गाड़ियां हैं। जब रक्त में शुगर ज्यादा हो जाती है (HbA1c और ग्लूकोज), तो हाईवे पर भारी ट्रैफिक जाम लग जाता है और सड़कें चिपचिपी हो जाती हैं! हरी पत्तेदार सब्जियां और कम चीनी वाला भोजन खाने से अतिरिक्त गाड़ियां हट जाती हैं और रक्त का बहाव फिर से सुचारू हो जाता है।"
                     if has_diabetes else
@@ -751,7 +775,15 @@ class MedSimplifyAIPipeline:
                 ]
             },
             "ta": {
-                "title": f"{title} (தமிழ்)",
+                "title": (
+                    "டெங்கு மற்றும் பிளேட்லெட் அறிக்கை பகுப்பாய்வு" if has_dengue else
+                    "சர்க்கரை நோய் மற்றும் மெட்டாபாலிசிம் அறிக்கை பகுப்பாய்வு" if has_diabetes else
+                    "ரத்தசோகை மற்றும் ஹீமோகுளோபின் அறிக்கை பகுப்பாய்வு" if has_anemia else
+                    "கொலஸ்ட்ரால் மற்றும் கொழுப்பு பரிசோதனை அறிக்கை" if has_lipid else
+                    "ஒவ்வாமை மற்றும் IgE பரிசோதனை அறிக்கை" if has_ige else
+                    "கல்லீரல் செயல்பாடு (LFT) அறிக்கை பகுப்பாய்வு" if has_lft else
+                    "மருத்துவ பரிசோதனை அறிக்கை பகுப்பாய்வு"
+                ),
                 "eli5_summary": (
                     "🚗 உங்கள் ரத்த ஓட்டத்தை ஒரு பரபரப்பான நகர நெடுஞ்சாலையாக நினைத்துப் பாருங்கள். சர்க்கரை மூலக்கூறுகள் தான் அதில் செல்லும் கார்கள். ரத்தத்தில் சர்க்கரை அளவு அதிகரிக்கும் போது (HbA1c & Fasting Glucose), நெடுஞ்சாலையில் பெரிய போக்குவரத்து நெரிசல் ஏற்பட்டு சாலைகள் ஒட்டும் தன்மையுடையதாக மாறிவிடும்! புதிய பச்சை காய்கறிகள் மற்றும் நார்சத்து உணவுகளை சாப்பிட்டு, இனிப்புகளை தவிர்த்தால் கூடுதல் கார்கள் விலகி ரத்த ஓட்டம் சீராகும்."
                     if has_diabetes else
@@ -792,7 +824,15 @@ class MedSimplifyAIPipeline:
                 ]
             },
             "te": {
-                "title": f"{title} (తెలుగు)",
+                "title": (
+                    "డెంగ్యూ మరియు ప్లేట్‌లెట్ నివేదిక విశ్లేషణ" if has_dengue else
+                    "మధుమేహం మరియు మెటబాలిక్ నివేదిక విశ్లేషణ" if has_diabetes else
+                    "రక్తహీనత మరియు హిమోగ్లోబిన్ నివేదిక విశ్లేషణ" if has_anemia else
+                    "కొలెస్ట్రాల్ మరియు లిపిడ్ ప్రొఫైల్ విశ్లేషణ" if has_lipid else
+                    "అలెర్జీ ప్రొఫైల్ నివేదిక విశ్లేషణ" if has_ige else
+                    "కాలేయ పనితీరు (LFT) నివేదిక విశ్లేషణ" if has_lft else
+                    "వైద్య నివేదిక విశ్లేషణ"
+                ),
                 "eli5_summary": (
                     "🚗 మీ రక్త ప్రవాహాన్ని రద్దీగా ఉండే నగర రహదారిగా ఊహించుకోండి, మరియు చక్కెర అణువులు కార్లు. రక్తంలో చక్కెర పరిమాణం పెరిగినప్పుడు (HbA1c & ఫాస్టింగ్ గ్లూకోజ్), రహదారిపై భారీ ట్రాఫిక్ జామ్ ఏర్పడి రహదారులు జిగటగా మారతాయి! ఆకుకూరలు మరియు ఫైబర్ ఆహారం తీసుకోవడం ద్వారా అదనపు కార్లు తొలగిపోయి రక్త ప్రవాహం మళ్లీ సులభంగా మారుతుంది."
                     if has_diabetes else
@@ -833,7 +873,15 @@ class MedSimplifyAIPipeline:
                 ]
             },
             "es": {
-                "title": f"{title} (Español)",
+                "title": (
+                    "Análisis de Perfil de Dengue y Hemograma" if has_dengue else
+                    "Análisis de Diagnóstico Metabólico y Diabetes" if has_diabetes else
+                    "Análisis de Hemograma y Perfil de Anemia" if has_anemia else
+                    "Análisis de Perfil Lipídico y Colesterol" if has_lipid else
+                    "Análisis de Inmunoglobulina IgE y Alergias" if has_ige else
+                    "Análisis de Pruebas de Función Hepática (LFT)" if has_lft else
+                    "Análisis de Informe Médico General"
+                ),
                 "eli5_summary": (
                     "🚗 Imagine su torrente sanguíneo como una carretera transitada y las moléculas de azúcar como automóviles. Cuando el azúcar aumenta (HbA1c y glucosa), se produce un gran embotellamiento que ralentiza todo. Comer verduras frescas y fibra ayuda a despejar los autos adicionales para que el tráfico fluya sin problemas."
                     if has_diabetes else
@@ -1166,7 +1214,7 @@ class MedSimplifyAIPipeline:
         """Processes document text and returns structured dictionary for database saving."""
         if not raw_text or not raw_text.strip() or raw_text.strip().lower() in ["string", "none", "null"]:
             raw_text = self.ocr.get_sample_text(filename=filename or "")
-        simplified = self.simplify_report(raw_text)
+        simplified = self.simplify_report(raw_text, filename=filename or "")
 
         extracted_data = {
             "patient_name": simplified.get("patient_name", "Yash M. Patel"),

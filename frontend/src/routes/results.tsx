@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AlertTriangle, Bell, CheckCircle2, Download, Globe, Phone, Share2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { PageHeader, PhoneFrame, Screen, SectionTitle } from "@/components/app-shell";
@@ -794,6 +794,20 @@ function ResultsScreen() {
   const [speaking, setSpeaking] = useState(false);
   const [translatedCache, setTranslatedCache] = useState<Record<string, any>>({});
   const [isTranslating, setIsTranslating] = useState(false);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Stop any active audio on unmount
+  useEffect(() => {
+    return () => {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setFormattedDate(new Date().toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }));
@@ -921,13 +935,19 @@ function ResultsScreen() {
 
   // Detect report condition to pull matching native translations from MULTILINGUAL_CATALOG
   const detectedConditionKey = (() => {
-    const raw = (rawText + " " + (liveData?.file_name || "") + " " + baseTitle).toLowerCase();
-    if (raw.includes("dengue") || raw.includes("platelet") || raw.includes("ns1")) return "dengue";
+    const raw = (
+      rawText + " " +
+      (liveData?.file_name || "") + " " +
+      baseTitle + " " +
+      JSON.stringify(entitiesList || []) + " " +
+      JSON.stringify(importantFindings || [])
+    ).toLowerCase();
+    if (raw.includes("dengue") || raw.includes("platelet") || raw.includes("ns1") || raw.includes("80,000") || raw.includes("80000")) return "dengue";
     if (raw.includes("diabetes") || raw.includes("glucose") || raw.includes("hba1c") || raw.includes("sugar")) return "diabetes";
     if (raw.includes("anemia") || raw.includes("hemoglobin") || raw.includes("ferritin") || raw.includes("rbc")) return "anemia";
     if (raw.includes("lipid") || raw.includes("cholesterol") || raw.includes("triglyceride") || raw.includes("hdl") || raw.includes("ldl")) return "lipid";
     if (raw.includes("liver") || raw.includes("sgpt") || raw.includes("sgot") || raw.includes("bilirubin") || raw.includes("lft")) return "lft";
-    if (raw.includes("ige") || raw.includes("allergy")) return "ige";
+    if (raw.includes("ige") || raw.includes("allergy") || raw.includes("rast")) return "ige";
     return "general";
   })();
 
@@ -938,8 +958,21 @@ function ResultsScreen() {
   const backendLangData = multiDict[selectedLanguage];
   const cacheLangData = translatedCache[selectedLanguage];
 
-  // Check if string contains dummy bracket prefix like "[TA]:" or "[HI]:"
-  const isDummy = (str?: string) => !str || str.startsWith("[TA]") || str.startsWith("[HI]") || str.startsWith("[TE]") || str.startsWith("[ES]") || /^\[[A-Z]{2,3}\]:/.test(str.trim());
+  // Check if string contains dummy bracket prefix like "[TA]:" or does not contain native script
+  const isDummy = (str?: string) => {
+    if (!str) return true;
+    const trimmed = str.trim();
+    if (trimmed.startsWith("[TA]") || trimmed.startsWith("[HI]") || trimmed.startsWith("[TE]") || trimmed.startsWith("[ES]") || /^\[[A-Z]{2,3}\]:/.test(trimmed)) {
+      return true;
+    }
+    // If Tamil is selected, text must contain Tamil Unicode characters
+    if (selectedLanguage === "ta" && !/[\u0B80-\u0BFF]/.test(trimmed)) return true;
+    // If Hindi is selected, text must contain Hindi Unicode characters
+    if (selectedLanguage === "hi" && !/[\u0900-\u097F]/.test(trimmed)) return true;
+    // If Telugu is selected, text must contain Telugu Unicode characters
+    if (selectedLanguage === "te" && !/[\u0C00-\u0C7F]/.test(trimmed)) return true;
+    return false;
+  };
 
   const activeLangData: any = (!isDummy(backendLangData?.eli5_summary) && backendLangData)
     ? backendLangData
@@ -982,74 +1015,139 @@ function ResultsScreen() {
       }))
     : fullReportRows;
 
-
   const toggleVoiceSummary = () => {
+    // 1. If currently speaking, stop both Audio and SpeechSynthesis immediately
+    if (speaking) {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+      setSpeaking(false);
+      toast("Stopped audio playback");
+      return;
+    }
+
+    const activeLangObj = LANGUAGES.find((l) => l.code === selectedLanguage) || LANGUAGES[0];
+    const targetLangTag = activeLangObj.langTag;
+
+    // Build plain text without emojis or markdown brackets
+    let speechText = "";
+    if (eli5Mode) {
+      speechText = `${reportTitle}. ${eli5Text}`;
+    } else {
+      const findingsText = findings.map((f: any) => `${f.title}. ${f.lines.join(". ")}`).join(". ");
+      const actionsText = actions.join(". ");
+      speechText = `${reportTitle}. Findings: ${findingsText}. What to do: ${actionsText}`;
+    }
+
+    // Strip symbols and emojis, keep alphanumeric and regional script characters
+    const cleanSpeech = speechText
+      .replace(/[^\w\s\.,;:!\?\-\'\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    setSpeaking(true);
+
+    // 2. High-Fidelity Audio Streaming via Backend Native TTS Service
+    try {
+      const ttsUrl = `${API_BASE_URL}/ai/tts?text=${encodeURIComponent(cleanSpeech)}&lang=${selectedLanguage}`;
+      const audio = new Audio(ttsUrl);
+      currentAudioRef.current = audio;
+
+      audio.onended = () => {
+        setSpeaking(false);
+        currentAudioRef.current = null;
+      };
+
+      audio.onerror = () => {
+        // Fallback to browser SpeechSynthesis if network audio stream fails
+        fallbackSpeechSynthesis(cleanSpeech, targetLangTag);
+      };
+
+      audio.play().catch(() => {
+        // In case browser autoplay policy blocks Audio constructor without user gesture
+        fallbackSpeechSynthesis(cleanSpeech, targetLangTag);
+      });
+
+      toast.success(`Playing native voice in ${activeLangObj.label.split(" ")[1] || "selected language"} 🔊`);
+    } catch {
+      fallbackSpeechSynthesis(cleanSpeech, targetLangTag);
+    }
+  };
+
+  const fallbackSpeechSynthesis = (text: string, langTag: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setSpeaking(false);
       toast.error("Text-to-speech is not supported on this browser.");
       return;
     }
-    if (speaking) {
-      window.speechSynthesis.cancel();
-      setSpeaking(false);
-      toast("Stopped audio playback");
-    } else {
-      const activeLangObj = LANGUAGES.find((l) => l.code === selectedLanguage) || LANGUAGES[0];
-      const targetLangTag = activeLangObj.langTag;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = langTag;
+    utterance.rate = 0.92;
 
-      let speechText = "";
-      if (eli5Mode) {
-        speechText = `${reportTitle}. ${eli5Text}`;
-      } else {
-        const findingsText = findings.map((f: any) => `${f.title}. ${f.lines.join(". ")}`).join(". ");
-        const actionsText = actions.join(". ");
-        speechText = `${reportTitle}. Findings: ${findingsText}. What to do: ${actionsText}`;
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      const matchingVoice = voices.find(
+        (v) => v.lang === langTag || v.lang.startsWith(langTag.split("-")[0])
+      );
+      if (matchingVoice) {
+        utterance.voice = matchingVoice;
       }
-
-      const utterance = new SpeechSynthesisUtterance(speechText);
-      utterance.lang = targetLangTag;
-      utterance.rate = 0.92; // slightly slower for clean clear pronunciation
-
-      // Load native matching voice if available in browser
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length > 0) {
-        const matchingVoice = voices.find(
-          (v) => v.lang === targetLangTag || v.lang.startsWith(targetLangTag.split("-")[0])
-        );
-        if (matchingVoice) {
-          utterance.voice = matchingVoice;
-        }
-      }
-
-      utterance.onend = () => setSpeaking(false);
-      utterance.onerror = () => setSpeaking(false);
-
-      window.speechSynthesis.speak(utterance);
-      setSpeaking(true);
-      toast.success(`Reading aloud in ${activeLangObj.label.split(" ")[1] || "selected language"} 🔊`);
     }
+
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+
+    window.speechSynthesis.speak(utterance);
   };
 
   return (
     <PhoneFrame>
       <PageHeader title="Analysis Complete" subtitle="✅ Your report is ready" back="/home" />
       <Screen>
-        <Card className="shadow-card">
-          <CardContent className="pt-6">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1 pr-1">
-                <h1 className="text-[17px] font-bold leading-snug break-words">📊 {reportTitle}</h1>
-                <p className="caption-text mt-1 truncate">
-                  {extractedPatientName} · {extractedAge} {extractedGender ? `(${extractedGender})` : ""} · {formattedDate}
-                </p>
-              </div>
+        <Card className="shadow-card overflow-hidden">
+          <CardContent className="p-4 sm:p-5">
+            {/* Header: Report badge on left, Listen button on right */}
+            <div className="flex items-center justify-between gap-2 pb-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold">
+                📋 Medical Report
+              </span>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2.5 gap-1 text-[11px] font-semibold shrink-0 self-start border-primary/30 text-primary hover:bg-primary/10 shadow-xs"
+                className={cn(
+                  "h-8 px-3 gap-1.5 text-xs font-semibold rounded-full border shadow-xs transition-all shrink-0",
+                  speaking
+                    ? "border-destructive text-destructive bg-destructive/10 animate-pulse"
+                    : "border-primary/40 text-primary hover:bg-primary/10"
+                )}
                 onClick={toggleVoiceSummary}
               >
-                {speaking ? "⏹️ Stop" : "🔊 Listen"}
+                {speaking ? (
+                  <>
+                    <span className="size-2 rounded-full bg-destructive inline-block mr-0.5 animate-ping" />
+                    <span>⏹️ Stop</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔊 Listen</span>
+                  </>
+                )}
               </Button>
+            </div>
+
+            {/* Title & Patient Meta (Full width, cannot squeeze button out of frame) */}
+            <div className="mt-1">
+              <h1 className="text-[17px] font-bold leading-snug break-words text-foreground">
+                📊 {reportTitle}
+              </h1>
+              <p className="caption-text mt-1 truncate">
+                {extractedPatientName} · {extractedAge} {extractedGender ? `(${extractedGender})` : ""} · {formattedDate}
+              </p>
             </div>
 
             {/* Multilingual Selector Bar */}
@@ -1060,14 +1158,21 @@ function ResultsScreen() {
               <select
                 value={selectedLanguage}
                 onChange={(e) => {
-                  setSelectedLanguage(e.target.value);
+                  const newLang = e.target.value;
                   if (speaking) {
-                    window.speechSynthesis.cancel();
+                    if (currentAudioRef.current) {
+                      currentAudioRef.current.pause();
+                      currentAudioRef.current = null;
+                    }
+                    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+                      window.speechSynthesis.cancel();
+                    }
                     setSpeaking(false);
                   }
+                  setSelectedLanguage(newLang);
                   toast.success(`Language set to ${e.target.options[e.target.selectedIndex].text}`);
                 }}
-                className="h-8 rounded-lg border border-primary/30 bg-primary/5 px-2 text-[12px] font-bold text-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                className="h-8 rounded-lg border border-primary/30 bg-primary/5 px-2 text-[12px] font-bold text-primary focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer shadow-xs"
               >
                 {LANGUAGES.map((lang) => (
                   <option key={lang.code} value={lang.code}>
@@ -1076,6 +1181,7 @@ function ResultsScreen() {
                 ))}
               </select>
             </div>
+
 
             {/* Mode Toggle Button */}
             <div className="mt-2.5 flex items-center justify-between border-t border-border/50 pt-2.5">

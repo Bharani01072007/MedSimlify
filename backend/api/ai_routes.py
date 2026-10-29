@@ -63,3 +63,95 @@ async def ai_chat_endpoint(req: ChatRequest):
     """24/7 AI Health Assistant & Q&A Chat"""
     answer = ai_pipeline.answer_patient_query(req.question)
     return {"question": req.question, "answer": answer}
+
+class TTSRequest(BaseModel):
+    text: str
+    lang: Optional[str] = "en"
+
+async def generate_tts_audio_bytes(text: str, lang: str = "en") -> bytes:
+    """Generates authentic native MP3 audio stream for Tamil, Hindi, Telugu, Spanish, Tanglish, and English."""
+    import httpx
+    import re
+    # Remove emojis, markdown formatting, symbols while preserving native language characters
+    clean = re.sub(r'[^\w\s\.,;:!\?\-\'\u0900-\u097F\u0B80-\u0BFF\u0C00-\u0C7F]', ' ', text)
+    clean = re.sub(r'\s+', ' ', clean).strip()
+    if not clean:
+        clean = "MedSimplify Medical Report Summary"
+
+    lang_map = {
+        "ta": "ta", "tamil": "ta",
+        "hi": "hi", "hindi": "hi",
+        "te": "te", "telugu": "te",
+        "es": "es", "spanish": "es",
+        "tanglish": "en-in",
+        "en": "en", "english": "en"
+    }
+    tl = lang_map.get(lang.lower().strip(), "en")
+
+    sentences = re.split(r'([.?!,;।\n])', clean)
+    chunks = []
+    curr = ""
+    for s in sentences:
+        if len(curr) + len(s) < 170:
+            curr += s
+        else:
+            if curr.strip():
+                chunks.append(curr.strip())
+            curr = s
+    if curr.strip():
+        chunks.append(curr.strip())
+
+    audio_bytes = bytearray()
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        for chunk in chunks[:12]:
+            if not chunk or len(chunk.strip()) < 2:
+                continue
+            try:
+                resp = await client.get(
+                    "https://translate.google.com/translate_tts",
+                    params={"ie": "UTF-8", "tl": tl, "client": "tw-ob", "q": chunk},
+                    headers=headers
+                )
+                if resp.status_code == 200:
+                    audio_bytes.extend(resp.content)
+            except Exception:
+                pass
+
+    return bytes(audio_bytes)
+
+@router.get("/tts")
+async def tts_get_endpoint(text: str = "MedSimplify", lang: str = "en"):
+    """Text-to-speech audio streaming in authentic native languages (Tamil, Hindi, Telugu, Spanish, English)"""
+    from fastapi.responses import Response
+    audio_data = await generate_tts_audio_bytes(text, lang)
+    if not audio_data:
+        raise HTTPException(status_code=500, detail="Could not generate TTS audio")
+    return Response(
+        content=audio_data,
+        media_type="audio/mpeg",
+        headers={
+            "Content-Disposition": "inline; filename=speech.mp3",
+            "Cache-Control": "public, max-age=86400"
+        }
+    )
+
+@router.post("/tts")
+async def tts_post_endpoint(req: TTSRequest):
+    """Text-to-speech audio streaming endpoint for long report contents"""
+    from fastapi.responses import Response
+    audio_data = await generate_tts_audio_bytes(req.text, req.lang or "en")
+    if not audio_data:
+        raise HTTPException(status_code=500, detail="Could not generate TTS audio")
+    return Response(
+        content=audio_data,
+        media_type="audio/mpeg",
+        headers={
+            "Content-Disposition": "inline; filename=speech.mp3",
+            "Cache-Control": "public, max-age=86400"
+        }
+    )
+
+
