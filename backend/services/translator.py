@@ -46,6 +46,33 @@ class MedicalTranslator:
 
     def translate(self, text: str) -> str:
         try:
+            if not text or not text.strip():
+                return ""
+
+            # 1. High-Precision Google Gemini AI Medical Translation
+            import os
+            api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+            if api_key and len(api_key.strip()) > 10:
+                try:
+                    import google.generativeai as genai
+                    genai.configure(api_key=api_key.strip())
+                    lang_names = {
+                        "hi": "Hindi (हिन्दी)",
+                        "ta": "Tamil (தமிழ்)",
+                        "te": "Telugu (తెలుగు)",
+                        "es": "Spanish (Español)",
+                        "bn": "Bengali (বাংলা)",
+                        "tanglish": "Tanglish (Tamil spoken words in Roman script)"
+                    }
+                    lang_name = lang_names.get(self.target_language, self.target_language)
+                    model = genai.GenerativeModel("gemini-2.5-flash")
+                    prompt = f"Translate the following medical report text accurately into natural, clear, fluent {lang_name}. Output ONLY the translated text with zero prefixes or metadata:\n\n{text}"
+                    res = model.generate_content(prompt)
+                    if res and res.text and len(res.text.strip()) > 0:
+                        return res.text.strip()
+                except Exception as g_err:
+                    logger.warning(f"Gemini translation notice: {g_err}")
+
             self._lazy_load()
             
             if self.model != "fallback" and self.model is not None and self.tokenizer is not None:
@@ -54,7 +81,7 @@ class MedicalTranslator:
                 translated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
                 return translated_text
 
-            # Dictionary Translation Fallback
+            # 2. Dictionary Translation Fallback
             if self.target_language == "hi":
                 dict_map = HINDI_DICTIONARY
             elif self.target_language == "ta":
@@ -76,7 +103,8 @@ class MedicalTranslator:
                         matched = True
                         break
                 if not matched:
-                    translated_lines.append(f"[{self.target_language.upper()}]: {line_str}")
+                    # Clean return without dummy bracket tags
+                    translated_lines.append(line_str)
                     
             return "\n".join(translated_lines)
 

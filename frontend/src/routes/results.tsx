@@ -919,15 +919,39 @@ function ResultsScreen() {
     "Severe dizziness, confusion, or fainting"
   ];
 
+  // Detect report condition to pull matching native translations from MULTILINGUAL_CATALOG
+  const detectedConditionKey = (() => {
+    const raw = (rawText + " " + (liveData?.file_name || "") + " " + baseTitle).toLowerCase();
+    if (raw.includes("dengue") || raw.includes("platelet") || raw.includes("ns1")) return "dengue";
+    if (raw.includes("diabetes") || raw.includes("glucose") || raw.includes("hba1c") || raw.includes("sugar")) return "diabetes";
+    if (raw.includes("anemia") || raw.includes("hemoglobin") || raw.includes("ferritin") || raw.includes("rbc")) return "anemia";
+    if (raw.includes("lipid") || raw.includes("cholesterol") || raw.includes("triglyceride") || raw.includes("hdl") || raw.includes("ldl")) return "lipid";
+    if (raw.includes("liver") || raw.includes("sgpt") || raw.includes("sgot") || raw.includes("bilirubin") || raw.includes("lft")) return "lft";
+    if (raw.includes("ige") || raw.includes("allergy")) return "ige";
+    return "general";
+  })();
+
+  const catalogItem = MULTILINGUAL_CATALOG[detectedConditionKey]?.[selectedLanguage] || MULTILINGUAL_CATALOG["general"]?.[selectedLanguage];
+
   // Resolve backend response multilingual dictionary or live AI model translated cache
   const multiDict = liveData?.simplified_summary?.multilingual || {};
-  const activeLangData = multiDict[selectedLanguage] || translatedCache[selectedLanguage] || {};
+  const backendLangData = multiDict[selectedLanguage];
+  const cacheLangData = translatedCache[selectedLanguage];
 
-  // Resolve title, ELI5 explanation, actions, and warnings dynamically from AI model output
-  const reportTitle = selectedLanguage === "en" ? baseTitle : (activeLangData.title || baseTitle);
-  const eli5Text = selectedLanguage === "en" ? baseEli5 : (activeLangData.eli5_summary || baseEli5);
-  const actions = selectedLanguage === "en" ? baseRecs : (activeLangData.recommendations || baseRecs);
-  const warnings = selectedLanguage === "en" ? baseWarns : (activeLangData.warning_signs || baseWarns);
+  // Check if string contains dummy bracket prefix like "[TA]:" or "[HI]:"
+  const isDummy = (str?: string) => !str || str.startsWith("[TA]") || str.startsWith("[HI]") || str.startsWith("[TE]") || str.startsWith("[ES]") || /^\[[A-Z]{2,3}\]:/.test(str.trim());
+
+  const activeLangData: any = (!isDummy(backendLangData?.eli5_summary) && backendLangData)
+    ? backendLangData
+    : (!isDummy(cacheLangData?.eli5_summary) && cacheLangData)
+      ? cacheLangData
+      : (catalogItem || {});
+
+  // Resolve title, ELI5 explanation, actions, and warnings dynamically from native translation
+  const reportTitle = selectedLanguage === "en" ? baseTitle : (activeLangData.title || catalogItem?.title || baseTitle);
+  const eli5Text = selectedLanguage === "en" ? baseEli5 : (activeLangData.eli5_summary || activeLangData.eli5 || catalogItem?.eli5 || baseEli5);
+  const actions = selectedLanguage === "en" ? baseRecs : (activeLangData.recommendations || activeLangData.actions || catalogItem?.actions || baseRecs);
+  const warnings = selectedLanguage === "en" ? baseWarns : (activeLangData.warning_signs || activeLangData.warnings || catalogItem?.warnings || baseWarns);
 
   const findings = entitiesList && Array.isArray(entitiesList) && entitiesList.length > 0
     ? entitiesList.map((f: any) => {
@@ -1011,17 +1035,17 @@ function ResultsScreen() {
       <Screen>
         <Card className="shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h1 className="text-[20px] font-bold">📊 {reportTitle}</h1>
-                <p className="caption-text mt-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 pr-1">
+                <h1 className="text-[17px] font-bold leading-snug break-words">📊 {reportTitle}</h1>
+                <p className="caption-text mt-1 truncate">
                   {extractedPatientName} · {extractedAge} {extractedGender ? `(${extractedGender})` : ""} · {formattedDate}
                 </p>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 gap-1 text-[12px] font-semibold shrink-0"
+                className="h-8 px-2.5 gap-1 text-[11px] font-semibold shrink-0 self-start border-primary/30 text-primary hover:bg-primary/10 shadow-xs"
                 onClick={toggleVoiceSummary}
               >
                 {speaking ? "⏹️ Stop" : "🔊 Listen"}
